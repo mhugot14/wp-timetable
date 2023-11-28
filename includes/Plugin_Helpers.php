@@ -1,5 +1,5 @@
 <?php
-
+namespace timetable;
 /** 
  * Diese Klasse binahltet eine Sammlunng an statischen Helfer-Funktionen
  * Statisch sind diese, da sie ohne 
@@ -10,7 +10,7 @@ class Plugin_Helpers{
 		/*Hier passiert das, was passiert, wenn das Plugin aktiviert wird
 		  */
 		
-		wp_schedule_event(time() - DAY_IN_SECONDS,'weekly','untisSchildConverter/weekly_cron');
+		wp_schedule_event(time() - DAY_IN_SECONDS,'weekly','timetable/weekly_cron');
 		/*
 		//Tabellen anlegen
 		global $wpdb;
@@ -86,5 +86,3 @@ class Plugin_Helpers{
 	}
 	
 }
-
-?>
