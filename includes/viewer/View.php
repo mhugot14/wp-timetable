@@ -33,7 +33,9 @@ class View{
 	}
 	
 	public function shortcode_insertTimetable($atts,string $content, string $name):string{
-		$my_timetable_frontend_view = new Timetable_frontend_view();
+		
+		//Attribut des Shortcodes auslesen und übergeben 
+		$my_timetable_frontend_view = new Timetable_frontend_view($atts['id']);
 		
 		$rueckgabe = $my_timetable_frontend_view->print();
 		return $rueckgabe;

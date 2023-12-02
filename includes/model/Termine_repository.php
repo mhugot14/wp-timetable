@@ -30,6 +30,12 @@ class Termine_repository implements Repository_interface{
 		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.';', ARRAY_A); 
 		 return $resultSet;
 	 }
+	 
+	 public function get_data_by_timetable_id($timetable_id){
+		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.
+				 ' WHERE timetable_ID = '.$timetable_id. ';', ARRAY_A); 
+		 return $resultSet;
+	 }
 
 	 public function update( $id, array $data ) {
 		 
