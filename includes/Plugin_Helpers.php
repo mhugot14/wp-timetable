@@ -11,11 +11,11 @@ class Plugin_Helpers{
 		  */
 		
 		wp_schedule_event(time() - DAY_IN_SECONDS,'weekly','timetable/weekly_cron');
-		/*
+		
 		//Tabellen anlegen
 		global $wpdb;
 		$charset_collate = $wpdb->get_charset_collate();
-		
+		/*
 		//tabellennamen
 		$usc_loesch_faecher = $wpdb->prefix.'usc_loesch_faecher';
 		$usc_loesch_klassen = $wpdb->prefix.'usc_loesch_klassen';
