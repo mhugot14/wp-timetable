@@ -1,0 +1,86 @@
+/*
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this template
+*/
+/* 
+    Created on : 21.02.2024, 22:50:17
+    Author     : micha
+*/
+
+.timetable-container{
+     overflow-x: auto;
+     width: 180%;
+    
+}
+
+.timetablegrid{
+    border: green 1px solid;
+    border-collapse: collapse;
+    width: 80%;
+    margin:10px;
+}
+
+.timetablegrid thead{
+    background-color: #6B818C;
+    color: #DDDDDD;
+    font-size: 0.7em;
+    border: #35605A 1px solid; 
+}
+
+.timetablegrid th{
+        padding:5px;
+        
+}
+.sticky_column{
+     position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color:#f6f2ec;
+    color:black;
+}
+
+.timetable_date{
+    writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #35605A 1px solid;
+    font-weight: normal;
+     
+    
+}
+.timetablegrid td{
+     border: #35605A 1px solid;
+     font-size: 0.7em;
+     padding:5px;
+
+}
+
+.td_ZK{
+    background-color: #704E2E;
+    color: white;
+}
+
+.td_ZA{
+     background-color: #2E4756;
+     color: white;
+}
+.td_APA{
+    background-color: #B98DA0;
+}
+.td_NE{
+    background-color: #7BB7AF;
+}
+.td_Sonstiges{
+    background-color:#D5C3C9;
+}
+
+.td_ende{
+    background-color: #DBC2CF;
+}
+/*Farben
+#D5C3C9 rosy-brown (heller))
+#B98DA0 puce
+#7BB7AF verdigris
+##6B818C slategrey
+#704E2E coffee
+*/

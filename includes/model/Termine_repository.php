@@ -33,7 +33,7 @@ class Termine_repository implements Repository_interface{
 	 
 	 public function get_data_by_timetable_id($timetable_id){
 		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.
-				 ' WHERE timetable_ID = '.$timetable_id. ';', ARRAY_A); 
+				 ' WHERE timetable_ID = '.$timetable_id. ' order by bildungsgang, beginn;', ARRAY_A); 
 		 return $resultSet;
 	 }
 

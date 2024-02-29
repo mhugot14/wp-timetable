@@ -26,15 +26,40 @@ class View{
 		//do_action( 'timetable/viewer/View/init', $this );
 		//$this->myPluginHelpers = new Plugin_Helpers;
 		
+		// Hook, um die Funktion aufzurufen für das Einbinden von CSS
+		add_action('wp_enqueue_scripts', [$this,'timetable_enqueue_styles']);
 	}
 	
 	public function setup_shortcodes(){
 		add_shortcode('insertTimetable',[$this,'shortcode_insertTimetable']);
 	}
-	
+	/* $atts: einzelne Parameter, die dem shortcode übergeben haben als array
+	 * $content: Inhalt, der zwischen dem anfänglichen und dem schließendem Shortcode
+	 *           eingetragen wurde
+	 * $name: name des shortcodes selbst
+	 */
 	public function shortcode_insertTimetable($atts,string $content, string $name):string{
-	
-		$rueckgabe = $my_timetable_frontend_view->print();
+		//auslesen der übergendenen IDs 
+		$rueckgabe="";
+		$timetable_id="0";
+		try{
+			if (is_array($atts)) {
+				// Jetzt kannst du auf den Index zugreifen
+				$timetable_id=$atts['id'];
+			} 
+			else {
+					echo "kein Array";
+			}
+			
+		} catch (Exception $ex) {
+		  
+			echo "fehler: ".$ex;
+		}
+		
+		
+		$my_timetable_frontend_view = new timetable_frontend_view($timetable_id);
+		
+		$rueckgabe .= $my_timetable_frontend_view->print_grid();
 		return $rueckgabe;
 	}  
 	//Initialisierung des Admin-Menüs durch die Funktion create_menu
@@ -109,5 +134,25 @@ class View{
 		</div>
 	<?php
 	}
+
 	
+	public function timetable_enqueue_styles() {
+    // Eindeutiger Bezeichner für dein Stylesheet
+    $handle = 'timetable';
+
+    // URL zur CSS-Datei in deinem Plugin
+    $src = plugins_url('/css/timetable_css.css', __FILE__);
+
+    // Array der Abhängigkeiten (hier keine Abhängigkeiten, daher leer)
+    $deps = array();
+
+    // Versionsnummer für Versionierung und Cache-Busting (kann auch 'null' sein)
+    $ver = '1.0';
+
+    // Füge das Stylesheet hinzu
+   wp_enqueue_style($handle, $src, $deps, $ver);
 }
+
+}	
+
+	
