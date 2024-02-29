@@ -9,7 +9,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 
 .timetable-container{
      overflow-x: auto;
-     width: 180%;
+     width: 95%;
     
 }
 
@@ -20,15 +20,17 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     margin:10px;
 }
 
-.timetablegrid thead{
+.timetablegrid_thead{
     background-color: #6B818C;
     color: #DDDDDD;
     font-size: 0.7em;
-    border: #35605A 1px solid; 
+    border: #35605A 1px solid !important; 
 }
 
-.timetablegrid th{
+.timetablegrid_th{
         padding:5px;
+        font-weight:normal;
+        background-color:#6B818C;
         
 }
 .sticky_column{
@@ -37,16 +39,19 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     z-index: 1;
     background-color:#f6f2ec;
     color:black;
+    padding:5px;
+    font-weight:normal;
 }
 
 .timetable_date{
     writing-mode: vertical-rl; /* Schräger Text */
     transform: rotate(180deg); /* 180 Grad drehen */
     /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
-    border: #35605A 1px solid;
-    font-weight: normal;
-     
-    
+    border: #35605A 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#6B818C !important;
+        
 }
 .timetablegrid td{
      border: #35605A 1px solid;

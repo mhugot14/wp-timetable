@@ -52,7 +52,7 @@ class Timetable_frontend_view{
 	}
 	public function generiere_gantt(): string {
 		$html = '<div class="timetable-container"><table class="timetablegrid">'
-				. '<thead><tr><th class="sticky_column">Bildungsgang</th>';
+				. '<thead class="timetablegrid_thead"><tr classe_timetablegrid_tr><th class="sticky_column">Bildungsgang</th>';
         $dates = $this->my_timetable_controller->get_dates();
         foreach ($dates as $date) {
                 $html .= '<th class="timetable_date">' . $date->format('d.m.') .
