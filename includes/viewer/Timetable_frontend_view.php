@@ -6,20 +6,22 @@ namespace timetable;
  */
 
 require_once MH_TT_PATH.'includes/controller/Timetable_controller.php';
+require_once MH_TT_PATH.'includes/model/Timetable.php';
 use DateTime;
 
 class Timetable_frontend_view{
 	
 	private $my_timetable_controller;
+	private $my_timetable;
 	private $id, $timetable_laenge;
 	private DateTime $timetable_start, $timetable_ende;
 	
 	 function __construct($id){
 		 $this->id=$id;
-		 $this->my_timetable_controller = new Timetable_controller($this->id);
-		 $this->timetable_start = $this->my_timetable_controller->earliest_date(); //DateTime::createFromFormat('d.m.y', $this->my_timetable_controller->earliest_date());
-		 $this->timetable_ende =$this->my_timetable_controller->last_date(); //DateTime::createFromFormat('d.m.y', $this->my_timetable_controller->last_date());
-		 $this->timetable_laenge= ($this->timetable_start->diff($this->timetable_ende))->days;
+		 $this->my_timetable = new Timetable($this->id);
+		 $this->timetable_start = $this->my_timetable->earliest_date(); //DateTime::createFromFormat('d.m.y', $this->my_timetable_controller->earliest_date());
+		 $this->timetable_ende =$this->my_timetable->last_date(); //DateTime::createFromFormat('d.m.y', $this->my_timetable_controller->last_date());
+		 $this->timetable_laenge= $this->my_timetable->get_laenge();
 	 }
 	
 	public function print():string{
@@ -31,14 +33,14 @@ class Timetable_frontend_view{
 	public function print_grid():string{
 		
 //		$grid=$this->print_bildungsgaenge_objects();
-		$grid=$this->generiere_gantt($this->my_timetable_controller->get_timetable_objects());
+		$grid=$this->generiere_gantt($this->my_timetable->get_timetable_objects());
 		return $grid;
 	}
 	
 	//debug-Funktion
 	public function print_bildungsgaenge_objects():string{
 		$timetablecontent="";
-		$termine=$this->my_timetable_controller->resultset_to_objects();
+		$termine=$this->my_timetable->termine_to_objects();
 		
 		foreach ($termine as $termin){
 			$timetablecontent.=$termin->get_bildungsgang()." ";
@@ -53,7 +55,7 @@ class Timetable_frontend_view{
 	public function generiere_gantt(): string {
 		$html = '<div class="timetable-container"><table class="timetablegrid">'
 				. '<thead class="timetablegrid_thead"><tr classe_timetablegrid_tr><th class="sticky_column">Bildungsgang</th>';
-        $dates = $this->my_timetable_controller->get_dates();
+        $dates = $this->my_timetable->get_dates();
         foreach ($dates as $date) {
                 $html .= '<th class="timetable_date">' . $date->format('d.m.') .
 						' | '.$this->get_wochentag($date) .'</th>';
@@ -63,7 +65,7 @@ class Timetable_frontend_view{
         $currentBildungsgang = null;
 		$zaehler=0;
 		//Achtung, funktioniert nur dann wenn get_timetable_objects nach Bildungsgängen sortiert
-        foreach ($this->my_timetable_controller->get_timetable_objects() as $termin) {
+        foreach ($this->my_timetable->get_timetable_objects() as $termin) {
 	            if ($termin->get_bildungsgang() != $currentBildungsgang) {
 				if ($zaehler>0 AND $zaehler<count($dates)){
 						$html .= '<td class="td_ende" colspan="'.count($dates)-$zaehler.'">Ende</td>';
