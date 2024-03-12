@@ -15,49 +15,34 @@ class Plugin_Helpers{
 		//Tabellen anlegen
 		global $wpdb;
 		$charset_collate = $wpdb->get_charset_collate();
-		/*
-		//tabellennamen
-		$usc_loesch_faecher = $wpdb->prefix.'usc_loesch_faecher';
-		$usc_loesch_klassen = $wpdb->prefix.'usc_loesch_klassen';
-		$usc_schildimport = $wpdb->prefix.'usc_schildimport';
-		$sql_usc_loesch_faecher = "CREATE TABLE `$usc_loesch_faecher` (
-									`id` int(11) NOT NULL AUTO_INCREMENT,
-									`fach_untis` varchar(50) NOT NULL,
-									`fach_schild` varchar(50) NOT NULL,
-									`klasse` varchar(10) NOT NULL,
-									`bemerkung` varchar(100) NOT NULL,
-									`importdatum` datetime NOT NULL,
-									PRIMARY KEY (`id`)
-									)ENGINE=InnoDB AUTO_INCREMENT=28 $charset_collate;";
 		
-		$sql_usc_loesch_klassen = "CREATE TABLE `$usc_loesch_klassen` (
-									`id` int(11) NOT NULL AUTO_INCREMENT,
-									`klasse_untis` varchar(10) NOT NULL,
-									`klasse_schild` varchar(10) NOT NULL,
-									`bemerkung` varchar(100) NOT NULL,
-									`importdatum` datetime NOT NULL,
+		//tabellennamen
+		$tt_termine = $wpdb->prefix.'tt_termine';
+		$tt_timetable = $wpdb->prefix.'tt_timetable';
+		$sql_tt_termine = "CREATE TABLE `$tt_termine` (
+									 `id` int(20) NOT NULL,
+										`bildungsgang` varchar(30) NOT NULL,
+										`bezeichnung` varchar(50) NOT NULL,
+										`ereignistyp` varchar(20) NOT NULL,
+										`beginn` date NOT NULL,
+										`ende` date NOT NULL,
+										`verantwortlich` varchar(30) NOT NULL,
+										`timetable_ID` int(10) NOT NULL
+									PRIMARY KEY (`id`)
+									)ENGINE=InnoDB AUTO_INCREMENT=72 $charset_collate;";
+		
+		$sql_tt_timetable = "CREATE TABLE `$tt_timetable` (
+									`id` int(10) NOT NULL,
+									`bezeichnung` text NOT NULL,
+									`beschreibung` text NOT NULL,
+									 `erzeugt_am` date NOT NULL DEFAULT current_timestamp()
 									PRIMARY KEY (`id`)
 								   ) ENGINE=InnoDB AUTO_INCREMENT=28 $charset_collate;";
 		
-		$sql_usc_schildimport = "CREATE TABLE  `$usc_schildimport`(
-									`id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-									`schuljahr` smallint(6) NOT NULL,
-									`halbjahr` varchar(3) NOT NULL,
-									`klasse` varchar(10) NOT NULL,
-									`fach` varchar(10) NOT NULL,
-									`lehrer` varchar(10) NOT NULL,
-									`giltfuerHalbjahr` varchar(5) NOT NULL,
-									`importID` int(11) NOT NULL,
-									PRIMARY KEY (`id`)
-								   ) ENGINE=InnoDB AUTO_INCREMENT=1474 $charset_collate;";
 		
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
-			dbDelta($sql_usc_loesch_faecher);
-			dbDelta($sql_usc_loesch_klassen);
-			dbDelta($sql_usc_schildimport);
-			
-	*/
-			
+			dbDelta($sql_tt_termine);
+			dbDelta($sql_tt_timetable);			
 	}
 		
 	

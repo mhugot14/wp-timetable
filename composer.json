@@ -1,0 +1,9 @@
+{
+    
+    "name": "mhugot/wp-timetable",
+    "type":"wordpress-plugin",
+    "require":{
+        "phpoffice/phpspreadsheet":"^1.17"
+    }
+}
+

@@ -53,7 +53,9 @@ class Timetable_frontend_view{
 		return $timetablecontent;
 	}
 	public function generiere_gantt(): string {
-		$html = '<div class="timetable-container"><table class="timetablegrid">'
+		$html = '<h2>'.$this->my_timetable->get_bezeichnung().'</h2>'
+				.'<p><b>'.$this->my_timetable->get_beschreibung().'</b></p>'
+				. '<div class="timetable-container">'.'<table class="timetablegrid">'
 				. '<thead class="timetablegrid_thead"><tr classe_timetablegrid_tr><th class="sticky_column">Bildungsgang</th>';
         $dates = $this->my_timetable->get_dates();
         foreach ($dates as $date) {
@@ -86,9 +88,14 @@ class Timetable_frontend_view{
 					else{
 						$dauer = $termin->get_dauer();
 						$html .= '<td colspan="'.strval($dauer).'" class="td_'.
-								    $termin->get_ereignistyp().'">' 
-								. $termin->get_ereignistyp(). '</td>';
+								    $termin->get_ereignistyp().'">'.$termin->get_ereignistyp() ;
+						if ($dauer>6 OR $termin->get_ereignistyp()=="Sonstiges"){
+						
+							$html .= ' (<i>'.$termin->get_bezeichnung().'</i>)' ;
+						}
+						$html.='</td>';
 						$zaehler+=$dauer;
+						
 						break;
 						
 					}	

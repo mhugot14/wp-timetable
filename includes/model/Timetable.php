@@ -175,6 +175,30 @@ class Timetable {
 		$this->laenge = $laenge;
 	}
 
+	public function get_bezeichnung() {
+		return $this->bezeichnung;
+	}
+
+	public function get_beschreibung() {
+		return $this->beschreibung;
+	}
+
+	public function get_erzeugt_am(): DateTime {
+		return $this->erzeugt_am;
+	}
+
+	public function set_bezeichnung( $bezeichnung ): void {
+		$this->bezeichnung = $bezeichnung;
+	}
+
+	public function set_beschreibung( $beschreibung ): void {
+		$this->beschreibung = $beschreibung;
+	}
+
+	public function set_erzeugt_am( DateTime $erzeugt_am ): void {
+		$this->erzeugt_am = $erzeugt_am;
+	}
+
 
 
 
