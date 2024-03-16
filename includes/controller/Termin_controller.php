@@ -29,8 +29,11 @@ class Termin_controller implements Controller_interface {
 	public function add_object($data) {
 		
 		
-		$my_termin = new Termin($id, $termin_beginn, $termin_ende, 
-				$bildungsgang, $bezeichnung, $ereignistyp, $verantwortlich, $timetable_id);
+		$my_termin = new Termin($data['beginn'], $data['ende'], 
+					$data['bildungsgang'], $data['bezeichnung'], $data['ereignistyp'], 
+					$data['verantwortlich'], $data['timetable_ID']);
+	
+		$my_termin->save();
 	}
 
 	public function delete_object( $id ) {
@@ -95,7 +98,7 @@ class Termin_controller implements Controller_interface {
 	
 	 public function read_csv($filepath) {
 		 
-		 $ergebnis="<p>Read_CSV-Output:<br/>";
+		 $ergebnis="<p>Importierte Daten:<br/>";
         // Überprüfen Sie, ob die Datei existiert
         if (!file_exists($filepath)) {
             return false;
@@ -115,7 +118,7 @@ class Termin_controller implements Controller_interface {
 		$header_row = [];
 		$first_row = true;
 					//DEBUG
-					$ergebnis.="<b>first row</b> <br/>";
+					$ergebnis.="<b>Überschriften</b> <br/>";
 		foreach ($worksheet->getRowIterator() as $row) {
 			if ($first_row) {
 				foreach ($row->getCellIterator() as $cell) {
@@ -138,7 +141,7 @@ class Termin_controller implements Controller_interface {
 				}
 				$row_data[$header_row[$my_key]] = $value;
 				//DEBUG
-				$ergebnis.= ' my_key: '.$my_key.' '.$value.'<br/>';
+				$ergebnis.= '<b>'.$header_row[$my_key].'</b>: '.$value.'<br/>';
 				$my_key++;
 			}
 			$csv_data[] = $row_data;
@@ -148,11 +151,7 @@ class Termin_controller implements Controller_interface {
 		// Erzeugen von Termin-Objekten und Speichern in die Datenbank
 		foreach ($csv_data as $data) {
 			
-			$my_termin = new Termin($data['beginn'], $data['ende'], 
-					$data['bildungsgang'], $data['bezeichnung'], $data['ereignistyp'], 
-					$data['verantwortlich'], $data['timetable_ID']);
-	
-			$my_termin->save();
+			$this->add_object($data);
 			
 		}
 		$ergebnis.='</p>';

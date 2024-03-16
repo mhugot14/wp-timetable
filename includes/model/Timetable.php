@@ -102,8 +102,10 @@ class Timetable {
             $timetable_id = $termin['timetable_ID'];
 
             // Ein Objekt der Klasse Termin_controller erstellen und zum Array hinzufügen
-            $termine[] = new Termin($id, $termin_beginn, $termin_ende, 
+			$termin = new Termin($termin_beginn, $termin_ende, 
 					$bildungsgang, $bezeichnung, $ereignistyp, $verantwortlich, $timetable_id);
+			$termin->set_id( $id );
+			$termine[] = $termin;
 		}
 			 // Sortiere das Array nach Bildungsgang und dann nach Datum
         usort($termine, function ($a, $b) {
