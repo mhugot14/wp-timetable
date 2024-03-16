@@ -8,14 +8,35 @@ namespace timetable;
 require_once 'Repository_interface.php';
 
 class Termine_repository implements Repository_interface{
+	private $wpdb;
+	private $tabellenname;
 	
 	 function __construct(){
 		 global $wpdb;
 		 $this->wpdb=$wpdb;
 		 $this->tabellenname = $this->wpdb->prefix.'tt_termine';
 	 }
-	 public function create( array $data ) {
-		 
+	 public function create($termin) {
+		 try{
+			$rueck=$this->wpdb->insert($this->tabellenname,
+					
+				array(
+						'bildungsgang' => $termin->get_bildungsgang(),
+						'bezeichnung' => $termin->get_bezeichnung(),
+						'ereignistyp' => $termin->get_ereignistyp(),
+						'beginn' => $termin->get_termin_beginn()->format('Y-m-d'),
+						'ende' => $termin->get_termin_ende()->format('Y-m-d'),
+						'verantwortlich'=>$termin->get_verantwortlich(),
+						'timetable_ID'=>$termin->get_timetable_id()
+					)
+				);
+			}
+			
+		catch (Exception $ex) {
+			
+			echo "Die Termine konnten nicht in die DB importiert werden: ".$ex;
+		
+		}
 	 }
 
 	 public function delete( $id ) {

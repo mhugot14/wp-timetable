@@ -23,7 +23,7 @@ class Timetable_controller implements Controller_interface{
 
 	 
 	 }
-	 public function add_object() {
+	 public function add_object($data) {
 		 
 	 }
 

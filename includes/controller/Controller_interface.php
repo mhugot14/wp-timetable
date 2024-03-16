@@ -21,7 +21,7 @@ interface Controller_interface {
     // Weitere Methoden je nach Bedarf
 	
 public function get_object_by_id($id);
-public function add_object();
+public function add_object($data);
 public function delete_object($id);
 public function edit_object($id);
 }

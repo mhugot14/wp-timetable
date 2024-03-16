@@ -7,16 +7,22 @@ namespace timetable;
 
 require_once 'Backend_List_Table.php';
 require_once 'Timetable_frontend_view.php';
+require_once 'Backend_Sidebox.php';
 require_once MH_TT_PATH. 'includes/model/Timetable_repository.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
+require_once MH_TT_PATH.'includes/controller/Termin_controller.php';
 
 class View{
 	
+	private $my_termin_controller;
 	public function __construct(){
 		
 		//BACKEND
+		$this->my_termin_controller = new Termin_controller();
 		add_action('admin_menu', [$this, 'create_menu']);
+		
 		//add_action('add_meta_boxes', [$this,'register_metaboxes']);
+		//add_filter('meta_box_location', [$this,'my_meta_box_location'], 10, 3);
 		
 		
 		
@@ -28,6 +34,11 @@ class View{
 		
 		// Hook, um die Funktion aufzurufen für das Einbinden von CSS
 		add_action('wp_enqueue_scripts', [$this,'timetable_enqueue_styles']);
+		add_action( 'admin_enqueue_scripts',[$this, 'custom_admin_styles'] );
+		
+		add_action( 'admin_post_handle_csv_upload', [$this,'handle_csv_upload_callback'] );
+		
+		
 	}
 	
 	public function setup_shortcodes(){
@@ -72,34 +83,57 @@ class View{
 					 [$this, 'render_timetable_page'],
 					'dashicons-clock',30
 				);
-		
-	
 
 	}
-	//nicht genutzt
+	
+	//funktioniert nicht
 	public function register_metaboxes(){
-		echo '<h1>hey</h1>';
+		echo '<h1>hallo register metaboxes</h1>';
 		add_meta_box(
 				'mh-metabox-timetable',
 				'Timetables',
 				[$this,'render_metabox_timetable'],
 				'mh-timetable',
-				'normal'
+				'normal',
+				'default'
 				);
 	
 	}
+	//funktoniert nicht
+	public function render_metabox_timetable(){
+		echo "Hallo aus der Render-Metabox-timetable";
+	}
+	/*
+	function my_meta_box_location($location, $post_type, $meta_box_id) {
+    if ($meta_box_id === 'mh-metabox-timetable') {
+        return 'right'; // 'normal', 'advanced', 'side'
+    }
+
+    return $location;
+}*/
 	
 	public function render_timetable_page(){
 		echo "<h1>Timetable - deine Übersicht bei der Zeugnisschreibung</h1>"
-		. "<p>Mit Timetable kannst du eine Übersicht im GANTT-Stil erzeugen, "
+		. "<p style='font-size:14px;'>Mit Timetable kannst du eine Übersicht im GANTT-Stil erzeugen, "
 				. "die einem gesamten Kollegium eine Übersicht bietet, was an welchem Tag "
-				. "bzw. Zeitraum während der Zeugnisschreibung zu tun ist.</p>"
-				. "<p>So organisiert du entspannt die Noteneinsammlung, über APAs, Konferenzen und Ausgaben "
-				. "mit dieser Timetable</p>";
+				. "bzw. Zeitraum während der Zeugnisschreibung zu tun ist.<br/><br/>"
+				. "So organisiert du entspannt die Noteneinsammlung, über APAs, Konferenzen und Ausgaben</p>";
 		
 		$my_termine_repository = new Termine_repository();
 		$data = $my_termine_repository->get_data();
-		$this->create_backend_table($data);
+		?>
+		<div class="be_table_box_wrap">
+			 <div class="list_table">
+		<?php	 
+			$this->create_backend_table($data);
+		?>
+			</div>
+		<?php
+		$my_sidebox = new Backend_Sidebox('Termine CSV-Import',$this->create_csv_upload()); 
+		echo $my_sidebox->print();
+		?>
+		</div>
+		<?php
 	}
 
 	
@@ -112,7 +146,21 @@ class View{
 		
 	}
 	
-		public function modal_termine(){
+	public function create_csv_upload(){
+		$formular="<p>Lade nachstehend eine CSV-Datei mit Terminen hoch.";
+		$formular .='<form enctype="multipart/form-data" method="post" '
+				. /*'action="'. esc_url( admin_url('admin-post.php') ).'*/'">
+					 <input type="hidden" name="action" value="handle_csv_upload">
+					<input type="file" class="file" name="csv_file" accept=".csv"><br/><br/>
+					<input type="submit" class="button button-primary" value="Upload CSV">
+					</form>';
+		
+		$formular .= $this->my_termin_controller->handle_csv_upload();
+		return $formular;
+	}
+	
+	
+	public function modal_termine(){
 		?>	
 		<div id="modalTermine" class="modal">
 			<div class="modal-content">
@@ -138,21 +186,32 @@ class View{
 	
 	public function timetable_enqueue_styles() {
     // Eindeutiger Bezeichner für dein Stylesheet
-    $handle = 'timetable';
+		$handle = 'timetable';
 
     // URL zur CSS-Datei in deinem Plugin
-    $src = plugins_url('/css/timetable_css.css', __FILE__);
+		$src = plugins_url('/css/timetable_css.css', __FILE__);
 
     // Array der Abhängigkeiten (hier keine Abhängigkeiten, daher leer)
-    $deps = array();
+		$deps = array();
 
     // Versionsnummer für Versionierung und Cache-Busting (kann auch 'null' sein)
-    $ver = '1.0';
+		$ver = '1.1';
 
     // Füge das Stylesheet hinzu
-   wp_enqueue_style($handle, $src, $deps, $ver);
-}
+	   wp_enqueue_style($handle, $src, $deps, $ver);
+	}
+	
+	//Backend CSS Einbinden
+	function custom_admin_styles() {
+    // Pfad zur CSS-Datei Ihres Plugins/Themas
+    $css_url = plugins_url('/css/timetable_admin.css', __FILE__);
+    
+    // Registrieren des CSS-Stils
+    wp_register_style( 'custom-admin-style', $css_url, false, '1.0.0' );
+
+    // Einbinden des CSS-Stils
+    wp_enqueue_style( 'custom-admin-style' );
+	}
 
 }	
 
-	

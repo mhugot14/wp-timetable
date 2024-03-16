@@ -10,9 +10,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 .timetable-container{
      overflow-x: auto;
      width: 95%;
-    
 }
-
 .timetablegrid{
     border: green 1px solid;
     border-collapse: collapse;

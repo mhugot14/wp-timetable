@@ -1,0 +1,61 @@
+/*
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this template
+*/
+/* 
+    Created on : 21.02.2024, 22:50:17
+    Author     : micha
+*/
+
+/*Backend Tabelle und Sidebox, mit Flex-Layout 3:1
+*/
+
+.be_table_box_wrap{
+    margin: 5px;
+    display: flex;
+    display: -webkit-flex;
+    flex-flow:row wrap;
+   -webkit-flex-flow:row wrap;
+}
+.list_table{
+    flex:3 1 0%;
+    -webkit-flex: 3 1 0%;
+    margin: 10px;
+}
+.be_sidebox{
+    flex:1 1 0%;
+    -webkit-flex: 1 1 0%;
+    
+    margin: 10px;
+    min-width: 240px;
+    border: 1px solid #c3c4c7;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    background: #fff;
+
+}
+.sidebox_header {
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #c3c4c7;
+  background-color: white;
+}
+.sidebox_header h2{
+    font-size: 14px;
+    padding: 8px 12px;
+    margin: 0;
+    line-height: 1.4;
+}
+.sidebox_content{
+    font-size: 12px;
+    padding: 8px 12px;
+    margin: 0;
+    line-height: 1.2;
+}
+
+/*Farben
+#D5C3C9 rosy-brown (heller))
+#B98DA0 puce
+#7BB7AF verdigris
+##6B818C slategrey
+#704E2E coffee
+*/
