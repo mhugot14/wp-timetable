@@ -152,6 +152,7 @@ class View{
 				. /*'action="'. esc_url( admin_url('admin-post.php') ).'*/'">
 					 <input type="hidden" name="action" value="handle_csv_upload">
 					<input type="file" class="file" name="csv_file" accept=".csv"><br/><br/>
+					<input type="checkbox" name="loeschen" value="loeschen"> bisherige Einträge löschen<br/><br/>
 					<input type="submit" class="button button-primary" value="Upload CSV">
 					</form>';
 		

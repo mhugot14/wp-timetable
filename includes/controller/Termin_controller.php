@@ -8,6 +8,7 @@ namespace timetable;
 
 require_once 'Controller_interface.php';
 require_once MH_TT_PATH.'includes/model/Termin.php';
+require_once MH_TT_PATH.'includes/model/Termine_Repository.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 
@@ -20,11 +21,13 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 class Termin_controller implements Controller_interface {
 	
 	private $my_termin;
+	private $my_termin_repository;
 	
 	public function __construct( ) {
 		
+		$this->my_termin_repository= new Termine_repository; 
 	}
-
+ 
 	
 	public function add_object($data) {
 		
@@ -54,9 +57,6 @@ class Termin_controller implements Controller_interface {
 		if 	( isset( $_FILES['csv_file'] )){
 		if ( isset( $_FILES['csv_file'] ) && $_FILES['csv_file']['error'] == UPLOAD_ERR_OK ) {
 			$file_info = pathinfo( $_FILES['csv_file']['name'] );
-			$file_size = $_FILES['csv_file']['size'];
-			$file_tmp = $_FILES['csv_file']['tmp_name'];
-			$file_type = $_FILES['csv_file']['type'];
 
 			// Überprüfen Sie, ob die Datei eine CSV-Datei ist
 			if ( strtolower( $file_info['extension'] ) === 'csv' ) {
@@ -72,8 +72,11 @@ class Termin_controller implements Controller_interface {
 					// Erfolgreicher Upload
 					$ergebnis.= '<p>CSV-Datei erfolgreich hochgeladen und in '
 								.$upload_path.' gespeichert.</p>';
+					
+					if (isset($_POST['loeschen']) && $_POST['loeschen'] == 'loeschen') {
+						$this->delete_all_objetcs();
+					}
 					//Verarbeitung der CSV-Datei
-					 
 					$ergebnis.= $this->read_csv($upload_path);
 				} 
 				else {
@@ -94,6 +97,10 @@ class Termin_controller implements Controller_interface {
 		
 		
 		return $ergebnis;
+	}
+	
+	public function delete_all_objetcs(){
+		$this->my_termin_repository->delete_all();
 	}
 	
 	 public function read_csv($filepath) {

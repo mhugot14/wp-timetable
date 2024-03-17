@@ -42,6 +42,13 @@ class Termine_repository implements Repository_interface{
 	 public function delete( $id ) {
 		 
 	 }
+	 public function delete_all(  ) {
+		 try{
+					$this->wpdb->query("TRUNCATE TABLE ".$this->tabellenname.';');
+				} catch (Exception $ex) {
+					echo "Die Tabelle konnte nicht geleert werden: ".$ex;
+				}
+	 }
 
 	 public function find( $id ) {
 		 
