@@ -160,6 +160,10 @@ class Timetable {
 		$laenge = ($this->get_earliest_date()->diff($this->get_last_date()))->days+1;
 		return $laenge;
 	}
+	//Funktion generiert eine iCal-Datei für einen bestimmten Bildungsgang
+	public function generate_ical($bildungsgang){
+		
+	}
 	
 	public function get_timetable_objects() {
 		return $this->timetable_objects;
