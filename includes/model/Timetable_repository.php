@@ -30,9 +30,18 @@ class Timetable_repository implements Repository_interface{
 	 }
 	 
 	 public function find($id){
-		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.
-				 ' WHERE id='.$id.';', ARRAY_A); 
-		 return $resultSet;
+		$query = $this->wpdb->prepare('SELECT * FROM ' . $this->tabellenname . ' WHERE id = %d;', $id);
+		$resultSet = $this->wpdb->get_results($query, ARRAY_A);
+		
+		 if ($resultSet != NULL){
+			return $resultSet;
+		 }
+		else {
+			echo $resultSet;
+			return FALSE;
+	 }
+		 
+		 
 	 }
 
 	 public function update( $id, array $data ) {

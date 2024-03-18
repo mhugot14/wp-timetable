@@ -36,14 +36,20 @@ class Timetable {
 	
 	public function initialize_object($id){
 		$this->my_timetable_repository = new Timetable_repository();
-		$timetable_data = $this->my_timetable_repository->find($id);
-		$this->bezeichnung = $timetable_data[0]['bezeichnung'];
-		$this->beschreibung= $timetable_data[0]['beschreibung'];
-		$this->erzeugt_am = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
-		$this->timetable_objects=$this->termine_to_objects();
-		$this->earliest_date=$this->earliest_date();
-		$this->last_date=$this->last_date();
-		$this->laenge=$this->get_laenge_in_tagen();
+		 
+			$timetable_data = $this->my_timetable_repository->find($id);
+			
+			if ($timetable_data != false){
+				$this->bezeichnung = $timetable_data[0]['bezeichnung'];
+				$this->beschreibung= $timetable_data[0]['beschreibung'];
+				$this->erzeugt_am = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
+				$this->timetable_objects=$this->termine_to_objects();
+				if ($this->timetable_objects!=null){
+					$this->earliest_date=$this->earliest_date();
+					$this->last_date=$this->last_date();
+					$this->laenge=$this->get_laenge_in_tagen();
+				}
+			}
 
 	}
 	
@@ -119,6 +125,17 @@ class Timetable {
         });
 
 		return $termine;
+	}
+	
+	public function check_anzahl_termine():bool{
+		$status=false;
+		
+		if (count($this->timetable_objects) >= 2){
+			$status = true;
+	}
+		
+		return $status;
+		
 	}
    //Array mit allen Tagen innerhalb der Timetable (z.B. für einen Kopf)
 	public function get_dates( ):?array{
