@@ -8,7 +8,7 @@ namespace timetable;
 
 require_once 'Controller_interface.php';
 require_once MH_TT_PATH.'includes/model/Termin.php';
-require_once MH_TT_PATH.'includes/model/Termine_Repository.php';
+require_once MH_TT_PATH.'includes/model/Termine_repository.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 
