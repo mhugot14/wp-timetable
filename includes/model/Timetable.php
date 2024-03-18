@@ -42,7 +42,14 @@ class Timetable {
 			if ($timetable_data != false){
 				$this->bezeichnung = $timetable_data[0]['bezeichnung'];
 				$this->beschreibung= $timetable_data[0]['beschreibung'];
-				$this->erzeugt_am = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
+				$date_time_object = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
+				if ($date_time_object!== FALSE){
+					$this->erzeugt_am = $date_time_object; 
+				}else {
+					 // Handle den Fall, in dem das DateTime-Objekt nicht erstellt werden konnte
+					  echo "Das Datenbank-Datum der Timetable konnte nicht erzeugt werden";
+				}
+				
 				$this->timetable_objects=$this->termine_to_objects();
 				if ($this->timetable_objects!=null){
 					$this->earliest_date=$this->earliest_date();
@@ -50,7 +57,6 @@ class Timetable {
 					$this->laenge=$this->get_laenge_in_tagen();
 				}
 			}
-
 	}
 	
 	 //Liefert frühstes Datum aller Termine der Timetable zurück

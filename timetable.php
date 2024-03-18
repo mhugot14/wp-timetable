@@ -32,6 +32,5 @@ require_once __DIR__ . '/includes/viewer/View.php';
 		MH_TT_FILE, 
 		['timetable\Plugin_Helpers' ,'activate']
 		);
-		echo 'register_activation_hook';
 	//startet die Ausgabe
 	new View();
