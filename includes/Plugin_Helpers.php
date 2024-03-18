@@ -20,25 +20,24 @@ class Plugin_Helpers{
 		$tt_termine = $wpdb->prefix.'tt_termine';
 		$tt_timetable = $wpdb->prefix.'tt_timetable';
 		$sql_tt_termine = "CREATE TABLE `$tt_termine` (
-									 `id` int(20) NOT NULL,
-										`bildungsgang` varchar(30) NOT NULL,
-										`bezeichnung` varchar(50) NOT NULL,
-										`ereignistyp` varchar(20) NOT NULL,
-										`beginn` date NOT NULL,
-										`ende` date NOT NULL,
-										`verantwortlich` varchar(30) NOT NULL,
-										`timetable_ID` int(10) NOT NULL
-									PRIMARY KEY (`id`)
-									)ENGINE=InnoDB AUTO_INCREMENT=72 $charset_collate;";
+    `id` int(20) NOT NULL AUTO_INCREMENT,
+    `bildungsgang` varchar(30) NOT NULL,
+    `bezeichnung` varchar(50) NOT NULL,
+    `ereignistyp` varchar(20) NOT NULL,
+    `beginn` date NOT NULL,
+    `ende` date NOT NULL,
+    `verantwortlich` varchar(30) NOT NULL,
+    `timetable_ID` int(10) NOT NULL,
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=72 $charset_collate;";
 		
 		$sql_tt_timetable = "CREATE TABLE `$tt_timetable` (
-									`id` int(10) NOT NULL,
-									`bezeichnung` text NOT NULL,
-									`beschreibung` text NOT NULL,
-									 `erzeugt_am` date NOT NULL DEFAULT current_timestamp()
-									PRIMARY KEY (`id`)
-								   ) ENGINE=InnoDB AUTO_INCREMENT=28 $charset_collate;";
-		
+    `id` int(10) NOT NULL ,
+    `bezeichnung` text NOT NULL,
+    `beschreibung` text NOT NULL,
+    `erzeugt_am` date NOT NULL DEFAULT current_timestamp(),
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB AUTO_INCREMENT=28 $charset_collate;";
 		$sql_tt_timetable_data = 
 				"INSERT INTO `wp_tt_timetable` (`id`, `bezeichnung`, `beschreibung`, `erzeugt_am`) VALUES
 				(1, 'Winter 2023/2024', 'Organisation der Zeugnisschreibung im Winter 2023/2024', '2023-09-01'),
@@ -50,7 +49,7 @@ class Plugin_Helpers{
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 			dbDelta($sql_tt_termine);
 			dbDelta($sql_tt_timetable);
-			dbDelta($sql_tt_timetable_data);			
+			dbDelta($sql_tt_timetable_data);	
 	}
 		
 	

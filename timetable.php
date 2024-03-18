@@ -25,13 +25,13 @@ define('MH_TT_PATH', plugin_dir_path(__FILE__));
 //Includes
 require_once __DIR__ . '/includes/Plugin_Helpers.php';
 require_once __DIR__ . '/includes/viewer/View.php';
-require_once __DIR__ . '/includes/viewer/View2.php';
+//require_once __DIR__ . '/includes/viewer/View2.php';
  
 	
 	register_activation_hook(
 		MH_TT_FILE, 
 		['timetable\Plugin_Helpers' ,'activate']
 		);
-	
+		echo 'register_activation_hook';
 	//startet die Ausgabe
 	new View();
