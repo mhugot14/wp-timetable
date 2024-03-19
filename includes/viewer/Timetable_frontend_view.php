@@ -41,8 +41,15 @@ class Timetable_frontend_view{
 				. '<thead class="timetablegrid_thead"><tr classe_timetablegrid_tr><th class="sticky_column">Bildungsgang</th>';
 			$dates = $this->my_timetable->get_dates();
 			foreach ($dates as $date) {
+				$wochentag = $this->get_wochentag($date);
+				if ($wochentag=='Sa' OR $wochentag=='So'){
+					$html .= '<th class="timetable_date_weekend">' . $date->format('d.m.') .
+							' | '.$wochentag .'</th>';
+				}
+				else{
 					$html .= '<th class="timetable_date">' . $date->format('d.m.') .
-							' | '.$this->get_wochentag($date) .'</th>';
+							' | '.$wochentag .'</th>';
+				}
 				}
 			$html .= '</tr></thead><tbody>';
 
@@ -57,14 +64,21 @@ class Timetable_frontend_view{
 
 					$zaehler=0;
 					$currentBildungsgang = $termin->get_bildungsgang();
-					$html .='<tr><td class="sticky_column">' . $termin->get_bildungsgang() . '</td>';
+					$ical_bg_pfad = $this->my_timetable->generate_ical( $currentBildungsgang );
+					$html .='<tr><td class="sticky_column">' . $termin->get_bildungsgang() . 
+							' <a href="'.$ical_bg_pfad.'">(iCal)</a></td>';
 				}	
 					while ($zaehler<count($dates)){
-			//		 echo '<br>'.$currentBildungsgang.' Termin Id: '.$termin->get_id().': $dates['.$zaehler.']: '.
-			//				 $dates[$zaehler]->format('d.m'). 
-			//					' = $termin->get_termin_beginn(): '.$termin->get_termin_beginn()->format('d.m');
-						if ($dates[$zaehler]!=$termin->get_termin_beginn()){
-							$html.='<td></td>';
+						$date = $dates[$zaehler];
+						$wochentag=$this->get_wochentag($date);
+						if ($date!=$termin->get_termin_beginn()){
+							if($wochentag=='Sa'OR $wochentag=='So'){
+								$html.='<td class="weekend"></td>';
+							}
+							else{
+								$html.='<td></td>';
+							}
+							
 							$zaehler+=1;
 						}
 						else{

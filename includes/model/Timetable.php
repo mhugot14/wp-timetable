@@ -10,6 +10,7 @@ namespace timetable;
 require_once 'Timetable_repository.php';
 require_once 'Termine_repository.php';
 require_once 'Termin.php';
+require_once MH_TT_PATH. '/includes/Plugin_Helpers.php';
 
 use DateTime;
 /**
@@ -162,7 +163,24 @@ class Timetable {
 	}
 	//Funktion generiert eine iCal-Datei für einen bestimmten Bildungsgang
 	public function generate_ical($bildungsgang){
-		
+		 // iCal-Inhalt erstellen
+			$ical_content = "BEGIN:VCALENDAR\n";
+			$ical_content .= "VERSION:2.0\n";
+			// Weitere iCal-Einträge hinzufügen...
+			$ical_content .= "END:VCALENDAR\n";
+
+		// Pfad zum Speichern der iCal-Datei
+			$file_name= sanitize_file_name('/timetable_' . $this->get_id().'_'.$bildungsgang.'.ics');
+			$file_dir = Plugin_Helpers::create_upload_folder( 'timetable/icals');
+			$file_path = $file_dir .$file_name;
+
+		// iCal-Datei speichern
+			file_put_contents($file_path, $ical_content);
+			
+			$download_file_path= Plugin_Helpers::get_download_path( 'timetable/icals').$file_name;
+
+    // Rückgabewert: Downloadpfad zur gespeicherten iCal-Datei
+    return $download_file_path;
 	}
 	
 	public function get_timetable_objects() {

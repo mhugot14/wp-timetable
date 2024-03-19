@@ -76,5 +76,28 @@ class Plugin_Helpers{
 			echo '</tr>';
 		}
 	}
+	public static function create_upload_folder($folder_path) {
+		// Holen des Upload-Verzeichnisses
+		$upload_dir = wp_upload_dir();
+
+		// Pfad zum neuen Ordner
+		$new_folder_path = $upload_dir['basedir'] . '/' . $folder_path;
+
+		// Prüfen, ob der Ordner bereits vorhanden ist
+		if (!file_exists($new_folder_path)) {
+			// Ordner erstellen, wenn er nicht vorhanden ist
+			wp_mkdir_p($new_folder_path);
+
+			}
+		return $new_folder_path;
+	}
 	
+	public static function get_download_path($folder_path){
+		$upload_dir = wp_upload_dir();
+		
+		$download_path=$upload_dir['baseurl'].'/'.$folder_path;
+		
+		
+		return $download_path;
+	}
 }
