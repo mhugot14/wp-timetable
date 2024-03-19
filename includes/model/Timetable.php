@@ -170,14 +170,14 @@ class Timetable {
 			$ical_content .= "END:VCALENDAR\n";
 
 		// Pfad zum Speichern der iCal-Datei
-			$file_name= sanitize_file_name('/timetable_' . $this->get_id().'_'.$bildungsgang.'.ics');
-			$file_dir = Plugin_Helpers::create_upload_folder( 'timetable/icals');
+			$file_name= sanitize_file_name($this->get_bezeichnung().'_'.$bildungsgang.'.ics');
+			$file_dir = Plugin_Helpers::create_upload_folder( 'timetable/icals/');
 			$file_path = $file_dir .$file_name;
 
 		// iCal-Datei speichern
 			file_put_contents($file_path, $ical_content);
 			
-			$download_file_path= Plugin_Helpers::get_download_path( 'timetable/icals').$file_name;
+			$download_file_path= Plugin_Helpers::get_download_path( 'timetable/icals/').$file_name;
 
     // Rückgabewert: Downloadpfad zur gespeicherten iCal-Datei
     return $download_file_path;
