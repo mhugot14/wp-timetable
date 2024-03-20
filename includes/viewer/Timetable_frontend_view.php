@@ -42,15 +42,21 @@ class Timetable_frontend_view{
 			$dates = $this->my_timetable->get_dates();
 			foreach ($dates as $date) {
 				$wochentag = $this->get_wochentag($date);
+				$this_date = $date->format('d.m.');
+				$css_klasse = "timetable_date";
+				$today = (new DateTime())->format( 'd.m.');
 				if ($wochentag=='Sa' OR $wochentag=='So'){
-					$html .= '<th class="timetable_date_weekend">' . $date->format('d.m.') .
+					$css_klasse.='_weekend';
+				}
+				if ($this_date==$today){
+					$css_klasse.='_today';
+				}
+				
+				$html .= '<th class="'.$css_klasse.'">' . $date->format('d.m.') .
 							' | '.$wochentag .'</th>';
-				}
-				else{
-					$html .= '<th class="timetable_date">' . $date->format('d.m.') .
-							' | '.$wochentag .'</th>';
-				}
-				}
+			
+				
+			}
 			$html .= '</tr></thead><tbody>';
 
 			$currentBildungsgang = null;

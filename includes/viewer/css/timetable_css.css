@@ -39,8 +39,28 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     font-weight: normal !important;
     padding:5px !important;
     background-color:#E6E9EB  !important;
-    color:black;
-        
+    color:black;       
+}
+.timetable_date_weekend_today{
+   writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#ff9999  !important;
+    color:black;       
+}
+
+.timetable_date_today{
+   writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#ff9999  !important;
+    color:black;       
 }
 .sticky_column{
      position: sticky;
@@ -50,6 +70,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     color:black;
     padding:5px;
     font-weight:normal;
+    min-width: 90px;
 }
 
 .timetable_date{

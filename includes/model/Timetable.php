@@ -166,7 +166,12 @@ class Timetable {
 		 // iCal-Inhalt erstellen
 			$ical_content = "BEGIN:VCALENDAR\n";
 			$ical_content .= "VERSION:2.0\n";
-			// Weitere iCal-Einträge hinzufügen...
+			// Termine zum iCal-Inhalt hinzufügen
+		foreach ($this->timetable_objects as $termin) {
+			if ($termin->get_bildungsgang()==$bildungsgang){
+				$ical_content .= $this->generate_ical_termin($termin);
+			}
+		}
 			$ical_content .= "END:VCALENDAR\n";
 
 		// Pfad zum Speichern der iCal-Datei
@@ -181,6 +186,26 @@ class Timetable {
 
     // Rückgabewert: Downloadpfad zur gespeicherten iCal-Datei
     return $download_file_path;
+	}
+	
+	private function generate_ical_termin($termin){
+		 // Formatierung der Terminzeiten
+    $termin_beginn = $termin->get_termin_beginn()->format('Ymd').'T000000';
+    $termin_ende = $termin->get_termin_ende()->format('Ymd').'T235900';
+
+    // iCal-Eintrag für den Termin erstellen
+    $ical_termin = "BEGIN:VEVENT\n";
+    $ical_termin .= "UID:" . uniqid() . "\n"; // Eindeutige ID für den Termin
+    $ical_termin .= "DTSTART:" . $termin_beginn . "\n"; // Startzeit des Termins
+    $ical_termin .= "DTEND:" . $termin_ende . "\n"; // Endzeit des Termins
+    $ical_termin .= "SUMMARY:" . $termin->get_bildungsgang() . ": ".$termin->get_bezeichnung() .
+					"(".$termin->get_ereignistyp().") \n"; // Titel des Termins
+    $ical_termin .= "DESCRIPTION:" . $this->get_bezeichnung()." / ".$this->get_beschreibung()."\n"; // Beschreibung des Termins
+    // Weitere Eigenschaften des Termins hinzufügen...
+
+    $ical_termin .= "END:VEVENT\n";
+
+    return $ical_termin;
 	}
 	
 	public function get_timetable_objects() {
