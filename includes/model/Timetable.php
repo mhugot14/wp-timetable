@@ -199,7 +199,7 @@ class Timetable {
     $ical_termin .= "DTSTART:" . $termin_beginn . "\n"; // Startzeit des Termins
     $ical_termin .= "DTEND:" . $termin_ende . "\n"; // Endzeit des Termins
     $ical_termin .= "SUMMARY:" . $termin->get_bildungsgang() . ": ".$termin->get_bezeichnung() .
-					"(".$termin->get_ereignistyp().") \n"; // Titel des Termins
+					" (".$termin->get_ereignistyp().") \n"; // Titel des Termins
     $ical_termin .= "DESCRIPTION:" . $this->get_bezeichnung()." / ".$this->get_beschreibung()."\n"; // Beschreibung des Termins
     // Weitere Eigenschaften des Termins hinzufügen...
 
