@@ -33,9 +33,26 @@ class Timetable_frontend_view{
 	}
 	
 	public function generiere_gantt(): string {
+		$today = (new DateTime())->format( 'd.m.');
+		
 		$html = '<h2>'.$this->my_timetable->get_bezeichnung().'</h2>'
 				.'<p><b>'.$this->my_timetable->get_beschreibung().'</b></p>';
-				
+		
+		//Test Javascript, um den aktuellen Tag vorne anzuzeigen
+		// JavaScript zum automatischen Scrollen
+		$html .= '<script>';
+		$html .= 'window.onload = function() {';
+		$html .= 'var todayColumn = document.querySelector("th.timetable_date_today");';
+		 $html .= 'if (todayColumn) {';
+		$html .= 'var todayColumnOffset = todayColumn.offsetLeft;';
+		$html .= 'var tableContainer = document.querySelector(".timetable-container");';
+		$html .= 'var viewportWidth = tableContainer.offsetWidth;';
+		$html .= 'var scrollOffset = todayColumnOffset - (viewportWidth / 2);'; // Reduziere den Scrollwert um die Hälfte der Viewport-Breite
+		$html .= 'tableContainer.scrollLeft = scrollOffset;';
+		$html .= '}';
+		$html .= '};';
+		$html .= '</script>';
+
         if ($this->my_timetable->check_anzahl_termine()==true){
 			$html .='<div class="timetable-container">'.'<table class="timetablegrid">'
 				. '<thead class="timetablegrid_thead"><tr classe_timetablegrid_tr><th class="sticky_column">Bildungsgang</th>';
@@ -44,7 +61,6 @@ class Timetable_frontend_view{
 				$wochentag = $this->get_wochentag($date);
 				$this_date = $date->format('d.m.');
 				$css_klasse = "timetable_date";
-				$today = (new DateTime())->format( 'd.m.');
 				if ($wochentag=='Sa' OR $wochentag=='So'){
 					$css_klasse.='_weekend';
 				}
@@ -64,7 +80,7 @@ class Timetable_frontend_view{
 			//Achtung, funktioniert nur dann wenn get_timetable_objects nach Bildungsgängen sortiert
 			foreach ($this->my_timetable->get_timetable_objects() as $termin) {
 					if ($termin->get_bildungsgang() != $currentBildungsgang) {
-					if ($zaehler>0 AND $zaehler<count($dates)){
+						if ($zaehler>0 AND $zaehler<count($dates)){
 							$html .= '<td class="td_ende" colspan="'.count($dates)-$zaehler.'">Ende</td>';
 						}
 
@@ -76,10 +92,15 @@ class Timetable_frontend_view{
 				}	
 					while ($zaehler<count($dates)){
 						$date = $dates[$zaehler];
-						$wochentag=$this->get_wochentag($date);
+						$date_day_month= (clone $date)->format( 'd.m.');
+
+								$wochentag=$this->get_wochentag($date);
 						if ($date!=$termin->get_termin_beginn()){
 							if($wochentag=='Sa'OR $wochentag=='So'){
 								$html.='<td class="weekend"></td>';
+							}
+							elseif($date_day_month ==$today){
+								$html.='<td class="today"></td>';
 							}
 							else{
 								$html.='<td></td>';

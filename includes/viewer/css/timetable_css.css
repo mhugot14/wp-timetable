@@ -93,6 +93,9 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     background-color: #E6E9EB;
 }
 
+.timetablegrid td.today{
+    background-color: #ff9999;
+}
 .td_ZK{
     background-color: #704E2E;
     color: white;
@@ -115,6 +118,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 .td_ende{
     background-color: #DBC2CF;
 }
+
 /*Farben
 #D5C3C9 rosy-brown (heller))
 #B98DA0 puce
