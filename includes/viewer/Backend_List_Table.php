@@ -26,8 +26,12 @@ class Backend_List_Table extends \WP_List_Table {
 	}
 	public function prepare_items(){
 		$this->items = $this->data;
-		$columns= $this->get_columns();
-		$this->_column_headers=array($columns);
+        $columns = $this->get_columns();
+        $hidden = $this->get_hidden_columns();
+        $sortable = $this->get_sortable_columns();
+		$this->_column_headers = array($columns, $hidden, $sortable);
+		usort( $this->items, array( &$this, 'sort_data' ) );
+		
 	}	
 	
 	public function get_columns(){
@@ -39,7 +43,8 @@ class Backend_List_Table extends \WP_List_Table {
 			'beginn' => 'Beginn',
 			'ende' => 'Ende',
 			'verantwortlich' => 'Verantwortlich',
-			'timetable_ID' => 'Timetable'
+			'timetable_ID' => 'Timetable',
+			'actions' => 'Aktionen'
 		);
 		return $columns;
 		
@@ -56,10 +61,20 @@ class Backend_List_Table extends \WP_List_Table {
 			case 'verantwortlich':
 			case 'timetable_ID':
 				return $item[$column_name];
+			case 'actions':
 			default:
 				return "no value";
 		}
 	}
+	
+	public function column_actions($item){
+		return sprintf(
+			 '<a href="#" class="edit-item" data-id="%s"><i class="fas fa-pencil-alt"></i></a> | '
+                . '<a href="#" class="delete-item" data-id="%s"><i class="fas fa-trash-alt"></i></a>',
+                $item['id'],
+                $item['id']
+    );
+}
 	
 	   // Diese Methode fügt eine benutzerdefinierte Aktion für das Hinzufügen eines neuen Datensatzes hinzu
     public function extra_tablenav($which) {
@@ -68,6 +83,70 @@ class Backend_List_Table extends \WP_List_Table {
             echo '<a href="admin.php?page=my-page&action=add_new">Neuen Datensatz hinzufügen</a>';
             echo '</div>';
         }
+	}
+	
+	 public function get_sortable_columns()
+    {
+       return array(	'id' => array('id',true),
+						'bildungsgang' => array('bildungsgang', false),
+						'timetable_ID' => array('timetable_ID',false),
+						'beginn'	=> array('beginn',false)
+			);
+	    	    
+		
+    }
+	
+	 /**
+     * Define which columns are hidden
+     *
+     * @return Array
+     */
+    public function get_hidden_columns()
+    {
+        return array();
+    }
+
+	  /**
+     * Allows you to sort the data by the variables set in the $_GET
+     *
+     * @return Mixed
+     */
+    private function sort_data( $a, $b )
+	{
+		// Set defaults
+		$orderby = 'id';
+		$order = 'asc';
+
+		// If orderby is set, use this as the sort column
+		if(!empty($_GET['orderby']))
+		{
+			$orderby = $_GET['orderby'];
+		}
+
+		// If order is set use this as the order
+		if(!empty($_GET['order']))
+		{
+			$order = $_GET['order'];
+		}
+
+		// Convert string IDs to integers for numerical comparison
+		$idA = intval($a['id']);
+		$idB = intval($b['id']);
+
+		// Perform numerical comparison
+		if($orderby === 'id') {
+			$result = $idA - $idB;
+		} else {
+			$result = strcmp( $a[$orderby], $b[$orderby] );
+		}
+
+		// Adjust result based on sort order
+		if($order === 'asc')
+		{
+			return $result;
+		}
+
+		return -$result;
 	}
 		
 }
