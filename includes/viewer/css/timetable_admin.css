@@ -51,6 +51,20 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
     margin: 0;
     line-height: 1.2;
 }
+ul.form_errors{
+    background-color:#F9D3D3;
+    border: #C61818 solid 1px;
+    padding: 5px;
+    color:#C61818;
+}
+div.form_success{
+    background-color:#D6F6DA;
+    border: #186E22 solid 1px;
+    padding: 5px;
+    color:#186E22;
+}
+
+   
 
 /*Farben
 #D5C3C9 rosy-brown (heller))

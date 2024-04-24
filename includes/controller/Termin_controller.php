@@ -10,7 +10,7 @@ require_once 'Controller_interface.php';
 require_once MH_TT_PATH.'includes/model/Termin.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
-
+use DateTime;
 
 
 /**
@@ -27,7 +27,88 @@ class Termin_controller implements Controller_interface {
 		
 		$this->my_termin_repository= new Termine_repository; 
 	}
- 
+	
+	public function process_form_submission($form_data){
+			
+		if (!isset($form_data['termin_speichern_nonce']) || 
+			!wp_verify_nonce($form_data['termin_speichern_nonce'], 'termin_speichern_nonce')) {
+           wp_die('Nonce-Fehler!'); // Sicherheitsüberprüfung für Nonce
+        }
+		//Daten einlesen und bereinigen
+		$san_data = [];
+		
+		 if (!empty($form_data['timetable_ID'])){
+			$san_data['timetable_ID'] = sanitize_text_field($form_data['timetable_ID']);
+		 } 	 
+		 $san_data['bezeichnung'] = sanitize_text_field($form_data['bezeichnung']);
+		 $san_data['bildungsgang'] = sanitize_text_field($form_data['bildungsgang']);
+		 $san_data['beginn'] = sanitize_text_field($form_data['beginn']);
+		 $san_data['ende'] = sanitize_text_field($form_data['ende']);
+		 $san_data['verantwortlich'] = sanitize_text_field($form_data['verantwortlich']);
+		 $san_data['ereignistyp'] = sanitize_text_field($form_data['ereignistyp']);
+		 
+		 if (empty($san_data['verantwortlich'])){
+			 $san_data['verwantwortlich']="";
+		 }
+		
+		$errors = $this->check_form_data($san_data);
+		
+		if (empty($errors)){
+		 $this->add_object($san_data);
+			
+		}
+		else{
+			return $errors;
+		}
+	}
+	
+	
+	public function check_form_data($data){
+		$errors = [];
+		
+		 if (empty($data['timetable_ID']) OR $data['timetable_ID']=="" ) {
+			$errors['timetable_ID'][] = 'Eine Timetable muss ausgewählt werden.';
+		 	}
+		
+		 if (empty($data['bildungsgang'])) {
+			$errors['bildungsgang'][] = 'Gib einen Bildungsgang an.';
+		 }
+		
+		 if (empty($data['bezeichnung'])) {
+			$errors['bezeichnung'][] = 'Gib eine Bezeichnung an.';
+		 }
+		 
+		 if (empty($data['ereignistyp'])) {
+			$errors['ereignistyp'][] = 'Gib einen Ereignistyp an.';
+		 }
+		 
+		 if (empty($data['beginn'])) {
+			$errors['beginn'][] = 'Gib einen Beginn an.';
+		 }
+		 else if (strtotime($data['beginn']) === false) {
+			$errors['beginn'][] = 'Das Enddatum ist ungültig.';
+		}	
+
+    // Überprüfe das Format des Startdatums
+    
+		 
+		if (empty($data['ende'])) {
+			$errors['ende'][] = 'Gib ein Ende an.';
+		 }
+		 
+		 else if (strtotime($data['beginn']) === false) {
+        $errors['beginn'][] = 'Das Startdatum ist ungültig.';
+    }
+		else{ 
+			$ende_date = DateTime::createFromFormat('Y-m-d', $data['ende']);
+	        $beginn_date = DateTime::createFromFormat('Y-m-d', $data['beginn']);
+    // Überprüfe, ob das Ende-Datum größer oder gleich dem Beginn-Datum ist
+		    if ($ende_date < $beginn_date) {
+				$errors['ende'][] = 'Das Enddatum darf nicht vor dem Startdatum liegen.';
+			}
+		}
+		return $errors;
+	}
 	
 	public function add_object($data) {
 		

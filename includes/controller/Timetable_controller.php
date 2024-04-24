@@ -20,7 +20,7 @@ class Timetable_controller implements Controller_interface{
 
 	
 	 function __construct(){
-
+		 $this->my_timetable_repository = new Timetable_repository();
 	 
 	 }
 	 public function add_object($data) {
@@ -38,7 +38,19 @@ class Timetable_controller implements Controller_interface{
 	 public function get_object_by_id( $id ) {
 		 
 	 }
-
+	 
+	 public function get_timetables_for_dropdown(){
+		 $timetable_for_dropdown = [];
+		 $resultset = $this->my_timetable_repository->get_data();
+		 
+		 foreach ($resultset as $row){
+			 $timetable_for_dropdown[] = array('id'=>$row['id'], 'bezeichnung'=>$row['bezeichnung']);
+		 }
+		 
+		 return $timetable_for_dropdown;
+		 
+		 
+	 }
 	 
 	
 }

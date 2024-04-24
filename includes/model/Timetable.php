@@ -190,9 +190,9 @@ class Timetable {
 	
 	private function generate_ical_termin($termin){
 		 // Formatierung der Terminzeiten
-    $termin_beginn = $termin->get_termin_beginn()->format('Ymd').'T000000';
-    $termin_ende = $termin->get_termin_ende()->format('Ymd').'T235900';
-
+    $termin_beginn = $termin->get_termin_beginn()->format('Ymd');
+    $termin_ende = clone $termin->get_termin_ende(); // Einen Tag hinzufüge->format('Ymd').'T235900';
+	$termin_ende = $termin_ende->modify('+1 day')->format('Ymd');
     // iCal-Eintrag für den Termin erstellen
     $ical_termin = "BEGIN:VEVENT\n";
     $ical_termin .= "UID:" . uniqid() . "\n"; // Eindeutige ID für den Termin

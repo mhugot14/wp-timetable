@@ -9,6 +9,9 @@ require_once 'Repository_interface.php';
 
 class Timetable_repository implements Repository_interface{
 	
+	private $wpdb;
+	private $tabellenname;
+	
 	 function __construct(){
 		 global $wpdb;
 		 $this->wpdb=$wpdb;

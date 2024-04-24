@@ -68,11 +68,27 @@ class Backend_List_Table extends \WP_List_Table {
 	}
 	
 	public function column_actions($item){
-		return sprintf(
-			 '<a href="#" class="edit-item" data-id="%s"><i class="fas fa-pencil-alt"></i></a> | '
-                . '<a href="#" class="delete-item" data-id="%s"><i class="fas fa-trash-alt"></i></a>',
-                $item['id'],
-                $item['id']
+    // Ein CSRF-Token generieren und in einer Session speichern
+    $token = md5(uniqid(rand(), true));
+    $_SESSION['csrf_token'] = $token;
+
+    // Den CSRF-Token als verstecktes Feld im Formular einfügen und die Buttons nebeneinander anzeigen
+    echo sprintf(
+        '<form method="post" action="admin.php?page=mh-timetable&action=edit&id=%s" style="display: inline-block;">
+            <input type="hidden" name="csrf_token" value="%s">
+            <button type="submit">Edit</button>
+        </form>',
+        $item['id'],
+        $token
+    );
+
+    echo sprintf(
+        '<form method="post" action="admin.php?page=mh-timetable&action=delete&id=%s" style="display: inline-block;">
+            <input type="hidden" name="csrf_token" value="%s">
+            <button type="submit">Löschen</button>
+        </form>',
+        $item['id'],
+        $token
     );
 }
 	
@@ -80,7 +96,6 @@ class Backend_List_Table extends \WP_List_Table {
     public function extra_tablenav($which) {
         if ($which === 'top') {
             echo '<div class="alignleft actions">';
-            echo '<a href="admin.php?page=my-page&action=add_new">Neuen Datensatz hinzufügen</a>';
             echo '</div>';
         }
 	}

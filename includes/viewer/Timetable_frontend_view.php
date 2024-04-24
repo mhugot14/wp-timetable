@@ -88,7 +88,7 @@ class Timetable_frontend_view{
 					$currentBildungsgang = $termin->get_bildungsgang();
 					$ical_bg_pfad = $this->my_timetable->generate_ical( $currentBildungsgang );
 					$html .='<tr><td class="sticky_column">' . $termin->get_bildungsgang() . 
-							' <a href="'.$ical_bg_pfad.'">(iCal)</a></td>';
+							'<a href="'.$ical_bg_pfad.'">(iCal)</a></td>';
 				}	
 					while ($zaehler<count($dates)){
 						$date = $dates[$zaehler];
