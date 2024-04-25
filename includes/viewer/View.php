@@ -8,18 +8,23 @@ namespace timetable;
 require_once 'Backend_List_Table.php';
 require_once 'Timetable_frontend_view.php';
 require_once 'Backend_Sidebox.php';
+require_once 'Backend_Termin_Edit.php';
+
 require_once MH_TT_PATH. 'includes/model/Timetable_repository.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
 require_once MH_TT_PATH.'includes/controller/Termin_controller.php';
 
 class View{
 	
-	private $my_termin_controller, $my_timetable_controller;
+	private $my_termin_controller, $my_timetable_controller, $my_termine_repository;
+	//Konstruktor
 	public function __construct(){
 		
 		//BACKEND
 		$this->my_termin_controller = new Termin_controller();
 		$this->my_timetable_controller = new Timetable_controller();
+		$this->my_termine_repository = new Termine_repository();
+		
 		add_action('admin_menu', [$this, 'create_menu']);
 		add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
 			
@@ -87,11 +92,11 @@ class View{
 				);
 		add_submenu_page(
         'mh-timetable', // Übergeordnete Seite (null für keine übergeordnete Seite)
-        'Termin',
-        'Termin erstellen',
+        'Einstellungen',
+        'Einstellungen',
         'manage_options', // Berechtigung, hier kannst du die entsprechende Berechtigung ändern
         'Termin_neu_bearbeiten',
-        [$this, 'render_termin_bearbeiten']
+        [$this, 'render_einstellungen']
     );
 		
 
@@ -110,18 +115,7 @@ class View{
 				);
 	
 	}
-	//funktoniert nicht
-	public function render_metabox_timetable(){
-		echo "Hallo aus der Render-Metabox-timetable";
-	}
-	/*
-	function my_meta_box_location($location, $post_type, $meta_box_id) {
-    if ($meta_box_id === 'mh-metabox-timetable') {
-        return 'right'; // 'normal', 'advanced', 'side'
-    }
 
-    return $location;
-}*/
 	
 	public function render_timetable_page(){
 		echo "<h1>Timetable - deine Übersicht bei der Zeugnisschreibung</h1>"
@@ -130,13 +124,12 @@ class View{
 				. "bzw. Zeitraum während der Zeugnisschreibung zu tun ist.<br/><br/>"
 				. "So organisiert du entspannt die Noteneinsammlung, über APAs, Konferenzen und Ausgaben</p>";
 		
-		$my_termine_repository = new Termine_repository();
-		$data = $my_termine_repository->get_data();
+		
 		
 		//Bereich, um neue Datensätze anzulegen
-		$this->edit_termin();
-		//Bereich der die Tabellen ausgibt.
-		$this->create_backend_table($data);
+		$this->render_termin_bearbeiten();
+		//Bereich der di;e Tabellen ausgibt.
+		$this->create_backend_table();
 		//Box unten für den CSV-Upload
 		$my_sidebox = new Backend_Sidebox('Termine CSV-Import',$this->create_csv_upload()); 
 		echo $my_sidebox->print();
@@ -144,13 +137,13 @@ class View{
 	}
 
 	
-	public function create_backend_table($data){
+	public function create_backend_table(){
 		?>
 		<h2>Termine - Übersicht</h2>
 		 <div class="list_table">
 		<?php
 		$table = new Backend_List_Table();
-		$table->set_data( $data );
+		$table->set_data( $this->my_termine_repository->get_data() );
 		$table->prepare_items();
 		$table->display();
 	    ?>
@@ -158,6 +151,12 @@ class View{
 			</div>
 	
 		<?php
+	}
+	
+	public function render_termin_bearbeiten(){
+		$my_backend_termin_edit = new Backend_Termin_Edit();
+		$html = $my_backend_termin_edit->edit_termin();
+		return $html;
 	}
 	
 	public function create_csv_upload(){
@@ -174,141 +173,9 @@ class View{
 		return $formular;
 	}
 	
-	public function render_termin_bearbeiten(){
-		$html = $this->edit_termin();
-		return $html;
+	public function render_einstellungen(){
+		echo '<h1>Einstellungen</h1>';
 	}
-	public function render_form_with_errors($form_data, $errors) {
-		?><div>
-			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
-			<!-- Hier die Formularfelder für die Dateneingabe -->
-			<select name="timetable_ID" >
-				<option value="" disabled selected>Timetable wählen...*</option>
-				<?php
-				$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
-				foreach ($timetable_data as $timetable){
-					echo '<option value="'.$timetable['id'].'">'.$timetable['id']
-						 .' | '.$timetable['bezeichnung'].'</option>';
-				}?>
-				
-			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*">			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*">			
-			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*">			
-			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*">
-			<input type="text" name="verantwortlich" placeholder="Verantwortlich"><br><br>
-		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
-			<input type="submit" name="termin_speichern" value="Speichern">
-			<input type="submit" value="Abbrechen">
-		</form>
-			<h3>Es sind Fehler aufgetreten</h3>
-			<?php
-			if (!empty($errors)) {
-              echo '<ul class="form_errors">';
-            foreach ($errors as $field_name => $field_errors) {
-                echo '<li><b>' . ucfirst($field_name) . '</b>: ';
-                echo implode(', ', $field_errors);
-                echo '</li>';
-            }
-            echo '</ul>';
-        
-        }
-        ?>
-		</div>
-		<?php
-		
-	}
-	
-	public function render_form(){
-		?>
-		
-		<div>
-			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
-			<!-- Hier die Formularfelder für die Dateneingabe -->
-			<select name="timetable_ID" >
-				<option value="" disabled selected>Timetable wählen...*</option>
-				<?php
-				$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
-				foreach ($timetable_data as $timetable){
-					echo '<option value="'.$timetable['id'].'">'.$timetable['id']
-						 .' | '.$timetable['bezeichnung'].'</option>';
-				}?>
-				
-			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*">			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*">			
-			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*">			
-			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*">
-			<input type="text" name="verantwortlich" placeholder="Verantwortlich"><br><br>
-		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
-			<input type="submit" name="termin_speichern" value="Speichern">
-			<input type="submit" value="Abbrechen">
-		</form>
-		</div>
-		
-		<?php
-	}
-	
-	public function edit_termin(){
-		 $icon_url = plugins_url('/css/calender_icon_32px.png', __FILE__);
-		?>	
-		<script>
-			jQuery(document).ready(function($) {
-				// Datepicker für das Feld mit der ID "datepicker_begin" aktivieren
-				$('#datepicker_begin').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
-					beforeShow: function(input, inst) {
-						$(input).prop('readonly', true);
-					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
-					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd'
-				});
-
-				// Datepicker für das Feld mit der ID "datepicker_end" aktivieren
-				$('#datepicker_end').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
-					beforeShow: function(input, inst) {
-						$(input).prop('readonly', true);
-					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
-					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd' 
-				});
-			});
-
-		</script>
-		<h2>Termin hinzufügen oder bearbeiten</h2>
-		
-		<?php
-		if (isset($_POST['termin_speichern'])) {
-		   $errors = $this->my_termin_controller->process_form_submission($_POST);
-		if (!empty($errors)) {
-            // Es gibt Fehler, das Formular mit Fehlermeldungen rendern
-            $this->render_form_with_errors($_POST, $errors);
-        } else {
-           $this->render_form()
-            ?>
-            <div class="form_success">Termin erfolgreich gespeichert!</div>
-			
-			<?php
-            
-        }
-    } else {
-        // Erster Aufruf des Formulars oder Abbrechen-Button, das Standard-Formular rendern
-        $this->render_form();
-    }
-		
-	}
-
 	
 	public function timetable_enqueue_styles() {
     // Eindeutiger Bezeichner für dein Stylesheet

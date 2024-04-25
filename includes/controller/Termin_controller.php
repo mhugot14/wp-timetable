@@ -128,7 +128,7 @@ class Termin_controller implements Controller_interface {
 		
 	}
 
-	public function get_object_by_id( $id ) {
+	public function get_object_by_id( $id ) { 
 		
 	}
 	

@@ -40,7 +40,12 @@ class Termine_repository implements Repository_interface{
 	 }
 
 	 public function delete( $id ) {
-		 
+		 try{
+					$query=$this->wpdb->prepare("DELETE FROM ".$this->tabellenname." WHERE id = %d;", $id);
+					$this->wpdb->query($query);
+				} catch (Exception $ex) {
+					echo "Objekt konnte nicht gelöscht werden: ".$ex;
+				} 
 	 }
 	 public function delete_all(  ) {
 		 try{
