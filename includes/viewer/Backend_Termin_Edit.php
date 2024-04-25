@@ -79,7 +79,10 @@ class Backend_Termin_Edit {
 			
 			switch ($action){
 				case 'delete':
-					$this->my_termin_controller->delete_object($id);
+					$check_modal=$this->modal_dialog_delete_check($id);
+					if($check_modal){
+						$this->my_termin_controller->delete_object($id);
+					}
 					break;
 				case 'edit':
 					$edit_termin = $this->my_termin_controller->get_object_by_id($id);
@@ -172,6 +175,28 @@ class Backend_Termin_Edit {
         ?>
 		</div>
 		<?php
+		
+	}
+	public function modal_dialog_delete_check($id){
+		$loesch_termin = $this->my_termin_controller->get_object_by_id( $id );
+		
+		$dialog_text= 'Möchten Sie wirklich den Termin mit der ID '
+				.$loesch_termin->get_id().' '.$loesch_termin->get_bezeichnung().' loeschen?';
+		  ?>
+		<script>
+			jQuery(document).ready(function($) {
+				// Beim Laden der Seite den Bestätigungsdialog anzeigen
+				if (confirm('Möchten Sie wirklich den Termin löschen?')) {
+					// Wenn der Benutzer "Ja" klickt, den Termin löschen
+					window.location.href = '<?php echo admin_url("admin.php?page=mh-timetable&action=delete-success&id=" . $id); ?>';
+					return true;
+				} else {
+					return false;
+				}
+			});
+		</script>
+    <?php
+				
 		
 	}
 }

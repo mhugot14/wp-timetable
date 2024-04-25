@@ -121,7 +121,7 @@ class Termin_controller implements Controller_interface {
 	}
 
 	public function delete_object( $id ) {
-		
+		$this->my_termin_repository->delete($id);
 	}
 
 	public function edit_object( $id ) {
@@ -129,6 +129,19 @@ class Termin_controller implements Controller_interface {
 	}
 
 	public function get_object_by_id( $id ) { 
+		$resultset = $this->my_termin_repository->find($id);
+		
+		if (!empty($resultset)){
+			$my_termin = new Termin($resultset['beginn'], $resultset['ende'], 
+					$resultset['bildungsgang'], $resultset['bezeichnung'], $resultset['ereignistyp'], 
+					$resultset['verantwortlich'], $resultset['timetable_ID']);
+			$my_termin->set_id($id);
+			
+			return $my_termin;
+		}
+		else {
+			return false;
+		}
 		
 	}
 	

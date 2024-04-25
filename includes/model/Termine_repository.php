@@ -56,7 +56,15 @@ class Termine_repository implements Repository_interface{
 	 }
 
 	 public function find( $id ) {
-		 
+		 try{
+					$query=$this->wpdb->prepare("SELECT * FROM ".$this->tabellenname." WHERE id = %d;", $id);
+					$resultset=$this->wpdb->query($query);
+					
+				} catch (Exception $ex) {
+					echo "Objekt konnte nicht gelöscht werden: ".$ex;
+				} 
+				return $resultset;
+	 
 	 }
 
 	 public function get_data() {
