@@ -57,7 +57,7 @@ class Backend_Termin_Edit {
 			});
 
 		</script>
-		<h2>Termin hinzufügen</h2>
+		<h2>Termin hinzufügen oder ändern</h2>
 		
 		<?php
 		if (isset($_POST['termin_speichern'])) {
@@ -72,21 +72,36 @@ class Backend_Termin_Edit {
 				<?php        
 			}
 		} 
+		else if (isset($_POST['termin_edit'])) {
+		   $errors = $this->my_termin_controller->process_form_submission($_POST);
+			if (!empty($errors)) {
+				// Es gibt Fehler, das Formular mit Fehlermeldungen rendern
+				$this->render_form_with_errors($_POST, $errors);
+			} else {
+			   $this->render_form()
+				?>
+				<div class="form_success">Termin erfolgreich gespeichert!</div>
+				<?php        
+			}
+		} 
+		
 		else if (isset($_GET['action'])){
 			echo 'GET: '.$_GET['id'].$_GET['action'];
 			$action = sanitize_text_field($_GET['action']);
 			$id = sanitize_text_field($_GET['id']);
-			
+			$termin = $this->my_termin_controller->get_object_by_id( $id );
 			switch ($action){
 				case 'delete':
-					$check_modal=$this->modal_dialog_delete_check($id);
+					$check_modal=$this->modal_dialog_delete_check($id, $termin);
 					if($check_modal){
 						$this->my_termin_controller->delete_object($id);
+						 echo "Termin gelöscht.";
+					
 					}
 					break;
 				case 'edit':
-					$edit_termin = $this->my_termin_controller->get_object_by_id($id);
-					$this->render_form_with_errors($edit_termin,array());
+				  $this->render_form_for_edit( $termin);
+					break;
 			}
 			
 		}
@@ -117,8 +132,8 @@ class Backend_Termin_Edit {
 			<input type="text" name="bildungsgang" placeholder="Bildungsgang*">			
 			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">			
 			<input type="text" name="ereignistyp" placeholder="Ereignistyp*">			
-			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*">			
-			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*">
+			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*" readonly>			
+			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*" readonly>
 			<input type="text" name="verantwortlich" placeholder="Verantwortlich"><br><br>
 		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
 			<input type="submit" name="termin_speichern" value="Speichern">
@@ -128,7 +143,50 @@ class Backend_Termin_Edit {
 		
 		<?php
 	}
+	public function render_form_for_edit($termin_object){
+		?><div>
+			<form enctype="multipart/form-data" method="post" action ="termin_edit" id="tt_termin_form">
+			<!-- Hier die Formularfelder für die Dateneingabe -->
+			<input type="text" size="3" name="id" placeholder="id*" value="<?php echo $termin_object->get_id();?>" readonly>
+			<select name="timetable_ID" >
+				<option value="" disabled selected>Timetable wählen...*</option>
+				<?php
+				$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
+				foreach ($timetable_data as $timetable){
+					if ($timetable['id']==$termin_object->get_timetable_ID()){
+						echo '<option value="'.$timetable['id'].'" selected>'.$timetable['id']
+						 .' | '.$timetable['bezeichnung'].'</option>';
+					}
+					else{
+						echo '<option value="'.$timetable['id'].'">'.$timetable['id']
+						 .' | '.$timetable['bezeichnung'].'</option>';
+					}
+				}?>
+				
+			</select>
+		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
+			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" 
+				   value="<?php echo $termin_object->get_bildungsgang();?>">			
+			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
+				   value="<?php echo $termin_object->get_bezeichnung();?>">			
+			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" 
+				   value="<?php echo $termin_object->get_ereignistyp();?>">			
+			<input type="text" size="10" name="beginn" id="datepicker_begin" 
+				   placeholder="Beginn*" readonly value="<?php echo $termin_object->get_termin_beginn_as_string();?>">			
+			<input type="text" size="10" name="ende" id="datepicker_end" 
+				   placeholder="Ende*" readonly value="<?php echo $termin_object->get_termin_ende_as_string();?>">
+			<input type="text" name="verantwortlich" placeholder="Verantwortlich"
+				   value="<?php echo $termin_object->get_verantwortlich();?>"><br><br>
+		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
+			<input type="submit" name="termin_speichern" value="Speichern">
+			<input type="submit" value="Abbrechen">
+		</form>
+		        
+      	</div>
+		<?php
+		
 	
+	}
 	public function render_form_with_errors($form_data, $errors) {
 		?><div>
 			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
@@ -150,12 +208,18 @@ class Backend_Termin_Edit {
 				
 			</select>
 		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" value="<?php echo $form_data['bildungsgang'];?>">			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" value="<?php echo $form_data['bezeichnung'];?>">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" value="<?php echo $form_data['ereignistyp'];?>">			
-			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*" value="<?php echo $form_data['beginn'];?>">			
-			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*" value="<?php echo $form_data['ende'];?>">
-			<input type="text" name="verantwortlich" placeholder="Verantwortlich"value="<?php echo $form_data['verantwortlich'];?>"><br><br>
+			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" 
+				   value="<?php echo $form_data['bildungsgang'];?>">			
+			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
+				   value="<?php echo $form_data['bezeichnung'];?>">			
+			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" 
+				   value="<?php echo $form_data['ereignistyp'];?>">			
+			<input type="text" size="10" name="beginn" id="datepicker_begin" 
+				   placeholder="Beginn*" value="<?php echo $form_data['beginn'];?>" readonly>			
+			<input type="text" size="10" name="ende" id="datepicker_end" 
+				   placeholder="Ende*" value="<?php echo $form_data['ende'];?>" readonly       >
+			<input type="text" name="verantwortlich" placeholder="Verantwortlich" 
+				   value="<?php echo $form_data['verantwortlich'];?>"><br><br>
 		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
 			<input type="submit" name="termin_speichern" value="Speichern">
 			<input type="submit" value="Abbrechen">
@@ -177,11 +241,10 @@ class Backend_Termin_Edit {
 		<?php
 		
 	}
-	public function modal_dialog_delete_check($id){
-		$loesch_termin = $this->my_termin_controller->get_object_by_id( $id );
-		
-		$dialog_text= 'Möchten Sie wirklich den Termin mit der ID '
-				.$loesch_termin->get_id().' Bezeichnung: '.$loesch_termin->get_bezeichnung().' loeschen?';
+	public function modal_dialog_delete_check($id, $loesch_termin){
+	
+		$dialog_text= 'Möchten Sie wirklich den Termin mit der\nID: '
+				.$loesch_termin->get_id().'\nBezeichnung: '.$loesch_termin->get_bezeichnung().'\nloeschen?';
 		  ?>
 		<script>
 			jQuery(document).ready(function($) {
@@ -189,9 +252,9 @@ class Backend_Termin_Edit {
 				if (confirm('<?php echo $dialog_text;?>')) {
 					// Wenn der Benutzer "Ja" klickt, den Termin löschen
 					window.location.href = '<?php echo admin_url("admin.php?page=mh-timetable&action=delete-success&id=" . $id); ?>';
-					return true;
+					<?php return true;?>
 				} else {
-					return false;
+					<?php return false;?>
 				}
 			});
 		</script>

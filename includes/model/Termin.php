@@ -61,10 +61,17 @@ class Termin {
 		        public function get_termin_beginn(): DateTime {
             return $this->termin_beginn;
         }
+		public function get_termin_beginn_as_string(): string {
+            return $this->termin_beginn->format('Y-m-d');
+		}
 
         public function get_termin_ende(): DateTime {
             return $this->termin_ende;
         }
+		
+		public function get_termin_ende_as_string(): string {
+            return $this->termin_ende->format('Y-m-d');
+		}
 
         public function get_bildungsgang(): string {
             return $this->bildungsgang;
