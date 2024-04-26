@@ -181,12 +181,12 @@ class Backend_Termin_Edit {
 		$loesch_termin = $this->my_termin_controller->get_object_by_id( $id );
 		
 		$dialog_text= 'Möchten Sie wirklich den Termin mit der ID '
-				.$loesch_termin->get_id().' '.$loesch_termin->get_bezeichnung().' loeschen?';
+				.$loesch_termin->get_id().' Bezeichnung: '.$loesch_termin->get_bezeichnung().' loeschen?';
 		  ?>
 		<script>
 			jQuery(document).ready(function($) {
 				// Beim Laden der Seite den Bestätigungsdialog anzeigen
-				if (confirm('Möchten Sie wirklich den Termin löschen?')) {
+				if (confirm('<?php echo $dialog_text;?>')) {
 					// Wenn der Benutzer "Ja" klickt, den Termin löschen
 					window.location.href = '<?php echo admin_url("admin.php?page=mh-timetable&action=delete-success&id=" . $id); ?>';
 					return true;

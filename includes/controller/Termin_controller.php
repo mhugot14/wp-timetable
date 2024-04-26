@@ -130,17 +130,32 @@ class Termin_controller implements Controller_interface {
 
 	public function get_object_by_id( $id ) { 
 		$resultset = $this->my_termin_repository->find($id);
-		
-		if (!empty($resultset)){
-			$my_termin = new Termin($resultset['beginn'], $resultset['ende'], 
-					$resultset['bildungsgang'], $resultset['bezeichnung'], $resultset['ereignistyp'], 
-					$resultset['verantwortlich'], $resultset['timetable_ID']);
+		$result = $resultset[0];
+		if (!empty($result)){
+		/*	$my_termin = new Termin(
+					$resultset[0]['beginn'], 
+					$resultset[0]['ende'], 
+					$resultset[0]['bildungsgang'], 
+					$resultset[0]['bezeichnung'], 
+					$resultset[0]['ereignistyp'], 
+					$resultset[0]['verantwortlich'], 
+					$resultset[0]['timetable_ID']
+					);*/
+		$my_termin = new Termin(
+            $result->beginn,
+            $result->ende,
+            $result->bildungsgang,
+            $result->bezeichnung,
+            $result->ereignistyp,
+            $result->verantwortlich,
+            $result->timetable_ID
+        );
 			$my_termin->set_id($id);
 			
 			return $my_termin;
 		}
 		else {
-			return false;
+			return null;
 		}
 		
 	}
