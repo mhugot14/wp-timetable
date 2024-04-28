@@ -96,11 +96,12 @@ class Timetable_frontend_view{
 
 								$wochentag=$this->get_wochentag($date);
 						if ($date!=$termin->get_termin_beginn()){
-							if($wochentag=='Sa'OR $wochentag=='So'){
-								$html.='<td class="weekend"></td>';
-							}
-							elseif($date_day_month ==$today){
+							
+							if($date_day_month ==$today){
 								$html.='<td class="today"></td>';
+							}
+							elseif($wochentag=='Sa'OR $wochentag=='So'){
+								$html.='<td class="weekend"></td>';
 							}
 							else{
 								$html.='<td></td>';
