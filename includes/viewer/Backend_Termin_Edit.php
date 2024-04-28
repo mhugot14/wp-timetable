@@ -80,23 +80,26 @@ class Backend_Termin_Edit {
 			} else {
 			   $this->render_form()
 				?>
-				<div class="form_success">Termin erfolgreich gespeichert!</div>
+				<div class="form_success">Termin erfolgreich geändert!</div>
 				<?php        
 			}
 		} 
 		
 		else if (isset($_GET['action'])){
-			echo 'GET: '.$_GET['id'].$_GET['action'];
+		//	echo 'GET: '.$_GET['id'].$_GET['action'];
 			$action = sanitize_text_field($_GET['action']);
 			$id = sanitize_text_field($_GET['id']);
 			$termin = $this->my_termin_controller->get_object_by_id( $id );
 			switch ($action){
 				case 'delete':
-					$check_modal=$this->modal_dialog_delete_check($id, $termin);
-					if($check_modal){
-						$this->my_termin_controller->delete_object($id);
-						 echo "Termin gelöscht.";
-					
+					if (!isset($_POST['delete_confirmation'])){
+						$this->modal_dialog_delete_check($id, $termin);
+					}
+					if (isset($_POST['delete_confirmation']) && $_POST['delete_confirmation'] === 'true') {
+    						$this->my_termin_controller->delete_object($id);
+								wp_redirect(admin_url('admin.php?page=mh-timetable'));
+							$this->render_form();
+						 echo '<div class="form_success">Termin gelöscht.</div>';
 					}
 					break;
 				case 'edit':
@@ -118,6 +121,7 @@ class Backend_Termin_Edit {
 		<div>
 			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
 			<!-- Hier die Formularfelder für die Dateneingabe -->
+			<input type="text" size="3" name="id" placeholder="id*" value="" readonly>
 			<select name="timetable_ID" >
 				<option value="" disabled selected>Timetable wählen...*</option>
 				<?php
@@ -145,7 +149,7 @@ class Backend_Termin_Edit {
 	}
 	public function render_form_for_edit($termin_object){
 		?><div>
-			<form enctype="multipart/form-data" method="post" action ="termin_edit" id="tt_termin_form">
+			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
 			<!-- Hier die Formularfelder für die Dateneingabe -->
 			<input type="text" size="3" name="id" placeholder="id*" value="<?php echo $termin_object->get_id();?>" readonly>
 			<select name="timetable_ID" >
@@ -191,6 +195,8 @@ class Backend_Termin_Edit {
 		?><div>
 			<form enctype="multipart/form-data" method="post" action ="" id="tt_termin_form">
 			<!-- Hier die Formularfelder für die Dateneingabe -->
+			<input type="text" size="3" name="id" placeholder="id*" value="<?php echo $form_data['id'];?>" readonly>
+
 			<select name="timetable_ID" >
 				<option value="" disabled selected>Timetable wählen...*</option>
 				<?php
@@ -241,25 +247,24 @@ class Backend_Termin_Edit {
 		<?php
 		
 	}
-	public function modal_dialog_delete_check($id, $loesch_termin){
-	
-		$dialog_text= 'Möchten Sie wirklich den Termin mit der\nID: '
-				.$loesch_termin->get_id().'\nBezeichnung: '.$loesch_termin->get_bezeichnung().'\nloeschen?';
-		  ?>
-		<script>
-			jQuery(document).ready(function($) {
-				// Beim Laden der Seite den Bestätigungsdialog anzeigen
-				if (confirm('<?php echo $dialog_text;?>')) {
-					// Wenn der Benutzer "Ja" klickt, den Termin löschen
-					window.location.href = '<?php echo admin_url("admin.php?page=mh-timetable&action=delete-success&id=" . $id); ?>';
-					<?php return true;?>
-				} else {
-					<?php return false;?>
-				}
-			});
-		</script>
+	public function modal_dialog_delete_check($id, $loesch_termin) {
+    $dialog_text = 'Möchten Sie wirklich den Termin mit der\nID: ' . $loesch_termin->get_id() . '\nBezeichnung: ' . $loesch_termin->get_bezeichnung() . '\nloeschen?';
+    ?>
+    <form id="delete_confirmation_form" method="post" action="">
+        <input type="hidden" id="delete_confirmation" name="delete_confirmation" value="false">
+    </form>
+    <script>
+        jQuery(document).ready(function($) {
+            // Beim Laden der Seite den Bestätigungsdialog anzeigen
+            if (confirm('<?php echo $dialog_text;?>')) {
+                // Wenn der Benutzer "Ja" klickt, den Wert der versteckten Variable auf true setzen
+                document.getElementById('delete_confirmation').value = 'true';
+                // Das Formular übermitteln
+                document.getElementById('delete_confirmation_form').submit();
+            }
+        });
+    </script>
     <?php
-				
-		
 	}
+
 }

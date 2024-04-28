@@ -78,10 +78,30 @@ class Termine_repository implements Repository_interface{
 		 return $resultSet;
 	 }
 
-	 public function update( $id, array $data ) {
+	 public function update( $id, $termin ) {
+		 
+		  try{
+			$rueck=$this->wpdb->update($this->tabellenname,
+					
+				array(
+						'bildungsgang' => $termin->get_bildungsgang(),
+						'bezeichnung' => $termin->get_bezeichnung(),
+						'ereignistyp' => $termin->get_ereignistyp(),
+						'beginn' => $termin->get_termin_beginn()->format('Y-m-d'),
+						'ende' => $termin->get_termin_ende()->format('Y-m-d'),
+						'verantwortlich'=>$termin->get_verantwortlich(),
+						'timetable_ID'=>$termin->get_timetable_id()
+				),
+				array(
+						'id'=>$id)
+				);
+			}
+			
+		catch (Exception $ex) {
+			
+			echo "Die Termine konnten nicht in die DB importiert werden: ".$ex;
+		
+		}
 		 
 	 }
- 
-	 
-	
 }   

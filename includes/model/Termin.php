@@ -120,8 +120,11 @@ class Termin {
 				
 		public function save(){
 			$this->my_Termine_repository->create( $this);
-			
-			
+		
+		}
+		
+		public function update(){
+			$this->my_Termine_repository->update($this->id, $this);
 		}
 
 }

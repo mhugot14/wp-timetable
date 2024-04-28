@@ -37,6 +37,9 @@ class Termin_controller implements Controller_interface {
 		//Daten einlesen und bereinigen
 		$san_data = [];
 		
+         if (!empty ($form_data['id'])){
+			 $san_data['id']=sanitize_text_field($form_data['id']);
+		 }		
 		 if (!empty($form_data['timetable_ID'])){
 			$san_data['timetable_ID'] = sanitize_text_field($form_data['timetable_ID']);
 		 } 	 
@@ -53,9 +56,11 @@ class Termin_controller implements Controller_interface {
 		
 		$errors = $this->check_form_data($san_data);
 		
-		if (empty($errors)){
+		if (empty($errors) && empty($form_data['id'])){
 		 $this->add_object($san_data);
-			
+		}
+		else if (empty($errors) && !empty($form_data['id'])){
+		 $this->edit_object($san_data);
 		}
 		else{
 			return $errors;
@@ -124,8 +129,12 @@ class Termin_controller implements Controller_interface {
 		$this->my_termin_repository->delete($id);
 	}
 
-	public function edit_object( $id ) {
-		
+	public function edit_object( $data ) {
+		$my_termin = new Termin($data['beginn'], $data['ende'], 
+					$data['bildungsgang'], $data['bezeichnung'], $data['ereignistyp'], 
+					$data['verantwortlich'], $data['timetable_ID']);
+		$my_termin->set_id($data['id']);
+		$my_termin->update();
 	}
 
 	public function get_object_by_id( $id ) { 
