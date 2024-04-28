@@ -61,7 +61,7 @@ class Timetable_frontend_view{
 				$wochentag = $this->get_wochentag($date);
 				$this_date = $date->format('d.m.');
 				$css_klasse = "timetable_date";
-				if ($wochentag=='Sa' OR $wochentag=='So'){
+				if (($wochentag=='Sa' OR $wochentag=='So') AND $this_date!=$today){
 					$css_klasse.='_weekend';
 				}
 				if ($this_date==$today){
