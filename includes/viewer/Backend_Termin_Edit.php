@@ -57,6 +57,7 @@ class Backend_Termin_Edit {
 			});
 
 		</script>
+		<div class="wrap_termin_hinzufuegen">
 		<h2>Termin hinzufügen oder ändern</h2>
 		
 		<?php
@@ -144,6 +145,7 @@ class Backend_Termin_Edit {
 			<input type="submit" value="Abbrechen">
 		</form>
 		</div>
+		</div> <!--wrap_termin_hinzufuegen schliessen-->
 		
 		<?php
 	}

@@ -65,7 +65,11 @@ div.form_success{
     color:#186E22;
 }
 
-   
+div.wrap_termin_hinzufuegen{
+     border: 1px solid #c3c4c7;
+     padding: 5px;
+     background-color: #ffffff;
+}
 
 /*Farben
 #D5C3C9 rosy-brown (heller))
