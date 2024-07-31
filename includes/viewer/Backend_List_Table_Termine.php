@@ -6,7 +6,7 @@ namespace timetable;
  */
 require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 
-class Backend_List_Table extends \WP_List_Table {
+class Backend_List_Table_Termine extends \WP_List_Table {
 	
 	private $data;
 	

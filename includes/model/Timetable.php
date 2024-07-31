@@ -22,8 +22,12 @@ class Timetable {
 	private $id;
 	private $bezeichnung, $beschreibung;
 	private DateTime $erzeugt_am;
-	private DateTime $earliest_date;
-	private DateTime $last_date;
+	//private DateTime $earliest_date;
+	//private DateTime $last_date;
+	
+	private ?DateTime $earliest_date = null;
+	private ?DateTime $last_date = null;
+	
 	private $laenge; //Länge der Timetable in Tagen
 	private $timetable_objects;
 	private $my_timetable_repository;
@@ -216,11 +220,11 @@ class Timetable {
 		return $this->id;
 	}
 
-	public function get_earliest_date(): DateTime {
+	public function get_earliest_date(): ?DateTime {
 		return $this->earliest_date;
 	}
 
-	public function get_last_date(): DateTime {
+	public function get_last_date(): ?DateTime {
 		return $this->last_date;
 	}
 

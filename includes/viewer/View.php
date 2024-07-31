@@ -5,10 +5,12 @@ namespace timetable;
  * Click nbfs://nbhost/SystemFileSystem/Templates/Scripting/EmptyPHP.php to edit this template
  */
 
-require_once 'Backend_List_Table.php';
+require_once 'Backend_List_Table_Termine.php';
+require_once 'Backend_List_Table_Timetables.php';
 require_once 'Timetable_frontend_view.php';
 require_once 'Backend_Sidebox.php';
 require_once 'Backend_Termin_Edit.php';
+require_once 'Backend_Timetable_Edit.php';
 
 require_once MH_TT_PATH. 'includes/model/Timetable_repository.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
@@ -16,7 +18,8 @@ require_once MH_TT_PATH.'includes/controller/Termin_controller.php';
 
 class View{
 	
-	private $my_termin_controller, $my_timetable_controller, $my_termine_repository;
+	private $my_termin_controller, $my_timetable_controller, $my_termine_repository,
+			$my_timetable_repository;
 	//Konstruktor
 	public function __construct(){
 		
@@ -24,6 +27,7 @@ class View{
 		$this->my_termin_controller = new Termin_controller();
 		$this->my_timetable_controller = new Timetable_controller();
 		$this->my_termine_repository = new Termine_repository();
+		$this->my_timetable_repository = new Timetable_repository();
 		
 		add_action('admin_menu', [$this, 'create_menu']);
 		add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
@@ -84,18 +88,29 @@ class View{
 	
 	public function create_menu(){
 		add_menu_page('Timetable',
-					 'Timetable',
+					 'Timetables',
 					 'manage_options', 
 					 'mh-timetable', 
 					 [$this, 'render_timetable_page'],
 					'dashicons-clock',30
 				);
+
+		add_submenu_page(
+        'mh-timetable', // Übergeordnete Seite (null für keine übergeordnete Seite)
+        'Termine',
+        'Termine',
+        'manage_options', // Berechtigung, hier kannst du die entsprechende Berechtigung ändern
+        'Termin_neu_bearbeiten',
+        [$this, 'render_termine_page']
+    );
+
+
 		add_submenu_page(
         'mh-timetable', // Übergeordnete Seite (null für keine übergeordnete Seite)
         'Einstellungen',
         'Einstellungen',
         'manage_options', // Berechtigung, hier kannst du die entsprechende Berechtigung ändern
-        'Termin_neu_bearbeiten',
+        'Einstellungen',
         [$this, 'render_einstellungen']
     );
 		
@@ -116,20 +131,30 @@ class View{
 	
 	}
 
-	
 	public function render_timetable_page(){
-		echo "<h1>Timetable - deine Übersicht bei der Zeugnisschreibung</h1>"
+			echo "<h1>Timetable - deine Übersicht bei der Zeugnisschreibung</h1>"
 		. "<p style='font-size:14px;'>Mit Timetable kannst du eine Übersicht im GANTT-Stil erzeugen, "
 				. "die einem gesamten Kollegium eine Übersicht bietet, was an welchem Tag "
 				. "bzw. Zeitraum während der Zeugnisschreibung zu tun ist.<br/><br/>"
 				. "So organisiert du entspannt die Noteneinsammlung, über APAs, Konferenzen und Ausgaben</p>";
 		
+		//Bereich, um neue Datensätze anzulegen
+		$this->render_timetable_bearbeiten();
+		echo "<br><br><h2>Timetables</h2>".
+				"<p>Eine Übersicht aller vorhandenen Zeittafeln.</p>";
+		$this->create_backend_table("timetables");
+			
+			
+	}
+	
+	public function render_termine_page(){
+		echo "<h1>Terminübersicht - alle Termine der Timetables</h1>";
 		
 		
 		//Bereich, um neue Datensätze anzulegen
 		$this->render_termin_bearbeiten();
 		//Bereich der di;e Tabellen ausgibt.
-		$this->create_backend_table();
+		$this->create_backend_table("termine");
 		//Box unten für den CSV-Upload
 		$my_sidebox = new Backend_Sidebox('Termine CSV-Import',$this->create_csv_upload()); 
 		echo $my_sidebox->print();
@@ -137,13 +162,21 @@ class View{
 	}
 
 	
-	public function create_backend_table(){
-		?>
-		<h2>Termine - Übersicht</h2>
-		 <div class="list_table">
-		<?php
-		$table = new Backend_List_Table();
-		$table->set_data( $this->my_termine_repository->get_data() );
+	public function create_backend_table($typ){
+		$table= null;
+		echo'<div class="list_table">';
+		if ($typ=="timetables"){
+			$table = new Backend_List_Table_Timetables();
+			$table->set_data( $this->my_timetable_repository->get_data() );
+		}
+		
+		else if ($typ=="termine"){
+			$table = new Backend_List_Table_Termine();
+			$table->set_data( $this->my_termine_repository->get_data() );
+		}
+		else{
+			echo '<p style="color:red;">Kenne den Typ nicht<p>';
+		}
 		$table->prepare_items();
 		$table->display();
 	    ?>
@@ -156,6 +189,12 @@ class View{
 	public function render_termin_bearbeiten(){
 		$my_backend_termin_edit = new Backend_Termin_Edit();
 		$html = $my_backend_termin_edit->edit_termin();
+		return $html;
+	}
+	
+	public function render_timetable_bearbeiten(){
+		$my_backend_timetable_edit = new Backend_Timetable_Edit();
+		$html = $my_backend_timetable_edit->edit_timetable();
 		return $html;
 	}
 	
