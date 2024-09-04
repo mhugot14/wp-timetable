@@ -63,23 +63,15 @@ class View{
 	public function shortcode_insertTimetable($atts,string $content, string $name):string{
 		//auslesen der übergendenen IDs 
 		$rueckgabe="";
-		$timetable_id="0";
-		try{
-			if (is_array($atts)) {
-				// Jetzt kannst du auf den Index zugreifen
-				$timetable_id=$atts['id'];
-			} 
-			else {
-					echo "kein Array";
-			}
-			
-		} catch (Exception $ex) {
-		  
-			echo "fehler: ".$ex;
-		}
+		$default_atts = [
+			'id' => 0,
+			'entwurf' => 'nein'
+		];
+		$atts = shortcode_atts($default_atts, $atts, $name);
+		$timetable_id = $atts['id'];
+		$entwurf = $atts['entwurf'];
 		
-		
-		$my_timetable_frontend_view = new timetable_frontend_view($timetable_id);
+		$my_timetable_frontend_view = new timetable_frontend_view($atts);
 		
 		$rueckgabe .= $my_timetable_frontend_view->print_grid();
 		return $rueckgabe;
@@ -100,7 +92,7 @@ class View{
         'Termine',
         'Termine',
         'manage_options', // Berechtigung, hier kannst du die entsprechende Berechtigung ändern
-        'Termin_neu_bearbeiten',
+        'termine',
         [$this, 'render_termine_page']
     );
 

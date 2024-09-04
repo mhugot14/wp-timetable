@@ -13,11 +13,13 @@ class Timetable_frontend_view{
 	
 	private $my_timetable_controller;
 	private $my_timetable;
-	private $id, $timetable_laenge;
+	private $id, $timetable_laenge, $entwurf;
 	private DateTime $timetable_start, $timetable_ende;
 	
-	 function __construct($id){
-		 $this->id=$id;
+	 function __construct($atts){
+		 
+		 $this->id=$atts['id'];
+		 $this->entwurf=$atts['entwurf'];
 		 $this->my_timetable = new Timetable($this->id);
 		 if ($this->my_timetable->get_timetable_objects()!=null){
 			$this->timetable_start = $this->my_timetable->get_earliest_date(); //DateTime::createFromFormat('d.m.y', $this->my_timetable_controller->earliest_date());
@@ -34,8 +36,11 @@ class Timetable_frontend_view{
 	
 	public function generiere_gantt(): string {
 		$today = (new DateTime())->format( 'd.m.');
-		
-		$html = '<h2>'.$this->my_timetable->get_bezeichnung().'</h2>'
+		$entwurf_text="";
+		if ($this->entwurf=='ja'){
+			$entwurf_text=' <span style="color:red;"> | ENTWURF - noch nicht eintragen</span>';
+		}
+		$html = '<h2>'.$this->my_timetable->get_bezeichnung().$entwurf_text.'</h2>'
 				.'<p><b>'.$this->my_timetable->get_beschreibung().'</b></p>';
 		
 		//Test Javascript, um den aktuellen Tag vorne anzuzeigen
@@ -86,9 +91,14 @@ class Timetable_frontend_view{
 
 					$zaehler=0;
 					$currentBildungsgang = $termin->get_bildungsgang();
-					$ical_bg_pfad = $this->my_timetable->generate_ical( $currentBildungsgang );
+					$ical_text="";
+					if ($this->entwurf=="nein"){
+						$ical_text = ' <a href="'.$this->my_timetable->generate_ical( $currentBildungsgang ).'">(iCal)</a> ';	
+					}
+					
+					
 					$html .='<tr><td class="sticky_column">' . $termin->get_bildungsgang() . 
-							'<a href="'.$ical_bg_pfad.'">(iCal)</a></td>';
+							$ical_text.'</td>';
 				}	
 					while ($zaehler<count($dates)){
 						$date = $dates[$zaehler];
