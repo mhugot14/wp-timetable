@@ -61,6 +61,7 @@ class Backend_Termin_Edit {
 		<h2>Termin hinzufügen oder ändern</h2>
 		
 		<?php
+		//Im Formular wird auf Termin speichern geklickt
 		if (isset($_POST['termin_speichern'])) {
 		   $errors = $this->my_termin_controller->process_form_submission($_POST);
 			if (!empty($errors)) {
@@ -73,42 +74,32 @@ class Backend_Termin_Edit {
 				<?php        
 			}
 		} 
-		else if (isset($_POST['termin_edit'])) {
-		   $errors = $this->my_termin_controller->process_form_submission($_POST);
-			if (!empty($errors)) {
-				// Es gibt Fehler, das Formular mit Fehlermeldungen rendern
-				$this->render_form_with_errors($_POST, $errors);
-			} else {
-			   $this->render_form()
-				?>
-				<div class="form_success">Termin erfolgreich geändert!</div>
-				<?php        
-			}
-		} 
-		
-		else if (isset($_GET['action'])){
-		//	echo 'GET: '.$_GET['id'].$_GET['action'];
-			$action = sanitize_text_field($_GET['action']);
-			$id = sanitize_text_field($_GET['id']);
+		//In der Tabelle wird der Button BEARBEITEN gedruckt.
+		else if (isset($_POST['termin_edit_nonce']) && wp_verify_nonce($_POST['termin_edit_nonce'], 'termin_edit_nonce')) {
+		   $id = sanitize_text_field($_POST['id']);
 			$termin = $this->my_termin_controller->get_object_by_id( $id );
-			switch ($action){
-				case 'delete':
-					if (!isset($_POST['delete_confirmation'])){
-						$this->modal_dialog_delete_check($id, $termin);
-					}
-					if (isset($_POST['delete_confirmation']) && $_POST['delete_confirmation'] === 'true') {
-    						$this->my_termin_controller->delete_object($id);
-								wp_redirect(admin_url('admin.php?page=mh-timetable'));
-							$this->render_form();
-						 echo '<div class="form_success">Termin gelöscht.</div>';
-					}
-					break;
-				case 'edit':
-				  $this->render_form_for_edit( $termin);
-					break;
-			}
+		    $this->render_form_for_edit( $termin);
 			
+		} 
+		//In der Tabelle wird der Button LÖSCHEN geklickt
+		else if (isset($_POST['termin_loeschen_nonce']) && wp_verify_nonce($_POST['termin_loeschen_nonce'], 'termin_loeschen_nonce')) {
+			$id = sanitize_text_field($_POST['id']);
+			$termin = $this->my_termin_controller->get_object_by_id($id);
+
+			// Überprüfen, ob delete_confirmation gesetzt wurde und true ist
+			if (isset($_POST['delete_confirmation']) && $_POST['delete_confirmation'] === 'true') {
+				  // Löschen des Objekts
+				$this->my_termin_controller->delete_object($id);
+				$this->render_form();
+				echo '<div class="form_success">Termin mit der ID '.$id.' gelöscht.</div>';
+				
+			} else {
+				// Zeige den Bestätigungsdialog an, wenn delete_confirmation noch nicht gesetzt ist
+				$this->modal_dialog_delete_check($termin);
+		
+			}
 		}
+			
 		else  {
         // Erster Aufruf des Formulars oder Abbrechen-Button, das Standard-Formular rendern
         $this->render_form();
@@ -249,21 +240,48 @@ class Backend_Termin_Edit {
 		<?php
 		
 	}
-	public function modal_dialog_delete_check($id, $loesch_termin) {
+	public function modal_dialog_delete_check($loesch_termin) {
     $dialog_text = 'Möchten Sie wirklich den Termin mit der\nID: ' . $loesch_termin->get_id() . '\nBezeichnung: ' . $loesch_termin->get_bezeichnung() . '\nloeschen?';
     ?>
     <form id="delete_confirmation_form" method="post" action="">
         <input type="hidden" id="delete_confirmation" name="delete_confirmation" value="false">
+		 <?php wp_nonce_field('termin_loeschen_nonce', 'termin_loeschen_nonce'); ?>
+        <input type="hidden" name="id" value="<?php echo $loesch_termin->get_id(); ?>">
     </form>
     <script>
         jQuery(document).ready(function($) {
+			 console.log('JavaScript geladen');
             // Beim Laden der Seite den Bestätigungsdialog anzeigen
             if (confirm('<?php echo $dialog_text;?>')) {
-                // Wenn der Benutzer "Ja" klickt, den Wert der versteckten Variable auf true setzen
-                document.getElementById('delete_confirmation').value = 'true';
-                // Das Formular übermitteln
-                document.getElementById('delete_confirmation_form').submit();
-            }
+				  console.log('Bestätigung erfolgt. Formular wird gesendet.');
+				  
+				 // Sicherstellen, dass das Hidden-Feld existiert und der Wert gesetzt wird
+				var deleteField = document.getElementById('delete_confirmation');
+				if (deleteField) {
+					// Wenn der Benutzer "Ja" klickt, den Wert der versteckten Variable auf true setzen
+					deleteField.value = 'true';
+					console.log('Hidden-Feld erfolgreich auf true gesetzt.');
+				} 
+				else {
+					console.log('Hidden-Feld delete_confirmation nicht gefunden.');
+				}  
+				  
+                
+                
+				
+				 // Sicherstellen, dass das Formular existiert und abgeschickt wird
+			 var deleteForm = document.getElementById('delete_confirmation_form');
+				if (deleteForm) {
+					deleteForm.submit();
+					console.log('Formular wurde abgeschickt.');
+				}
+				else {
+					console.log('Formular delete_confirmation_form nicht gefunden.');
+				}
+			}
+			else{
+				console.log('Bestätigung abgelehnt.');
+					}
         });
     </script>
     <?php

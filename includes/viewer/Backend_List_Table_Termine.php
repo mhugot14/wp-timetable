@@ -68,27 +68,26 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 	}
 	
 	public function column_actions($item){
-    // Ein CSRF-Token generieren und in einer Session speichern
-    $token = md5(uniqid(rand(), true));
-    $_SESSION['csrf_token'] = $token;
-
-    // Den CSRF-Token als verstecktes Feld im Formular einfügen und die Buttons nebeneinander anzeigen
+    $nonce_field_edit=wp_nonce_field( 'termin_edit_nonce', 'termin_edit_nonce' );
     echo sprintf(
-        '<form method="post" action="admin.php?page=mh-timetable&action=edit&id=%s" style="display: inline-block;">
-            <input type="hidden" name="csrf_token" value="%s">
-            <button type="submit">Edit</button>
+        '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
+				<input type="hidden" name="id" value="%s">
+			%s	
+            <button type="submit" name="termin_edit">Edit</button>
         </form>',
         $item['id'],
-        $token
+		$nonce_field_edit
+		
     );
-
+	$nonce_field_loeschen=wp_nonce_field('termin_loeschen_nonce','termin_loeschen_nonce');
     echo sprintf(
-        '<form method="post" action="admin.php?page=mh-timetable&action=delete&id=%s" style="display: inline-block;">
-            <input type="hidden" name="csrf_token" value="%s">
+        '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
+			<input type="hidden" name="id" value="%s">
+			%s	
             <button type="submit">Löschen</button>
         </form>',
         $item['id'],
-        $token
+		$nonce_field_loeschen
     );
 }
 	

@@ -68,8 +68,6 @@ class View{
 			'entwurf' => 'nein'
 		];
 		$atts = shortcode_atts($default_atts, $atts, $name);
-		$timetable_id = $atts['id'];
-		$entwurf = $atts['entwurf'];
 		
 		$my_timetable_frontend_view = new timetable_frontend_view($atts);
 		
