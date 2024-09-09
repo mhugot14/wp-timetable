@@ -18,11 +18,35 @@ class Timetable_repository implements Repository_interface{
 		 $this->tabellenname = $this->wpdb->prefix.'tt_timetable';
 		 
 	 }
-	 public function create( array $data ) {
+	 
+	 //Funktion legt ein neues Objekt in der Datenbank an, die ID vergibt die DB.
+	 public function create( $timetable ) {
+		  try{
+			$rueck=$this->wpdb->insert($this->tabellenname,
+					
+				array(
+						'bezeichnung' => $timetable->get_bezeichnung(),
+						'beschreibung' => $timetable->get_beschreibung()
+					)
+				);
+			}
+			
+		catch (Exception $ex) {
+			
+			echo "Die Timetable <i>".$timetable->get_bezeichnung()."</i> konnte nicht "
+					. "in die DB importiert werden: ".$ex;
+		
+		}
 		 
 	 }
 
 	 public function delete( $id ) {
+		  try{
+					$query=$this->wpdb->prepare("DELETE FROM ".$this->tabellenname." WHERE id = %d;", $id);
+					$this->wpdb->query($query);
+				} catch (Exception $ex) {
+					echo "Objekt konnte nicht gelöscht werden: ".$ex;
+				} 
 		 
 	 }
 
@@ -40,14 +64,31 @@ class Timetable_repository implements Repository_interface{
 			return $resultSet;
 		 }
 		else {
-			echo $resultSet;
+			echo "Es konnte keine Timetable gefunden werden.";//$resultSet;
 			return FALSE;
 	 }
 		 
 		 
 	 }
 
-	 public function update( $id, array $data ) {
+	 public function update( $id,  $timetable ) {
+		   try{
+			$rueck=$this->wpdb->update($this->tabellenname,
+					
+				array(
+						'bezeichnung' => $timetable->get_bezeichnung(),
+						'beschreibung' => $timetable->get_beschreibung()
+				),
+				array(
+						'id'=>$id)
+				);
+			}
+			
+		catch (Exception $ex) {
+			
+			echo "Die Timetable nicht in die DB importiert werden: ".$ex;
+		
+		}
 		 
 	 }
 

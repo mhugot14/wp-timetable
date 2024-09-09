@@ -29,7 +29,7 @@ class Termin_controller implements Controller_interface {
 	}
 	
 	public function process_form_submission($form_data){
-			
+		
 		if (!isset($form_data['termin_speichern_nonce']) || 
 			!wp_verify_nonce($form_data['termin_speichern_nonce'], 'termin_speichern_nonce')) {
            wp_die('Nonce-Fehler!'); // Sicherheitsüberprüfung für Nonce

@@ -77,26 +77,27 @@ class Backend_List_Table_Timetables extends \WP_List_Table {
     }
 
     public function column_actions($item) {
-        $token = md5(uniqid(rand(), true));
-        $_SESSION['csrf_token'] = $token;
-
-        echo sprintf(
-            '<form method="post" action="admin.php?page=mh-timetable&action=edit&id=%s" style="display: inline-block;">
-                <input type="hidden" name="csrf_token" value="%s">
-                <button type="submit">Edit</button>
-            </form>',
-            $item['id'],
-            $token
-        );
-
-        echo sprintf(
-            '<form method="post" action="admin.php?page=mh-timetable&action=delete&id=%s" style="display: inline-block;">
-                <input type="hidden" name="csrf_token" value="%s">
-                <button type="submit">Löschen</button>
-            </form>',
-            $item['id'],
-            $token
-        );
+       $nonce_field_edit=wp_nonce_field( 'timetable_edit_nonce', 'timetable_edit_nonce' );
+    echo sprintf(
+        '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
+				<input type="hidden" name="id" value="%s">
+			%s	
+            <button type="submit" name="timetable_edit">Edit</button>
+        </form>',
+        $item['id'],
+		$nonce_field_edit
+		
+    );
+	$nonce_field_loeschen=wp_nonce_field('timetable_loeschen_nonce','timetable_loeschen_nonce');
+    echo sprintf(
+        '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
+			<input type="hidden" name="id" value="%s">
+			%s	
+            <button type="submit">Löschen</button>
+        </form>',
+        $item['id'],
+		$nonce_field_loeschen
+    );
     }
 
     public function extra_tablenav($which) {

@@ -21,48 +21,60 @@ require_once MH_TT_PATH. 'includes/controller/Timetable_controller.php';
 	}
 	
 public function edit_timetable(){
-		 $icon_url = plugins_url('/css/calender_icon_32px.png', __FILE__);
-		?>	
-		<script>
-			jQuery(document).ready(function($) {
-				// Datepicker für das Feld mit der ID "datepicker_begin" aktivieren
-				$('#datepicker_begin').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
-					beforeShow: function(input, inst) {
-						$(input).prop('readonly', true);
-					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
-					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd'
-				});
-
-				// Datepicker für das Feld mit der ID "datepicker_end" aktivieren
-				$('#datepicker_end').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
-					beforeShow: function(input, inst) {
-						$(input).prop('readonly', true);
-					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
-					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd' 
-				});
-			});
-
-		</script>
+		 ?>
 		<div class="wrap_termin_hinzufuegen">
 		<h2>Timetables hinzufügen, ändern oder kopieren</h2>
 		
-		
-		
 		<?php
-		$this->render_form();
-		
-		
+		//Im Formular wird auf Termin speichern geklickt
+		if (isset($_POST['timetable_speichern'])) {
+		   $errors = $this->my_timetable_controller->process_form_submission($_POST);
+			if (!empty($errors)) {
+				// Es gibt Fehler, das Formular mit Fehlermeldungen rendern
+				$this->render_form_with_errors($_POST, $errors);
+			} else {
+			   $this->render_form()
+				?>
+				<div class="form_success">Timetable erfolgreich gespeichert!</div>
+				<?php        
+			}
 		}
+		//In der Tabelle wird der Button BEARBEITEN gedruckt.
+		else if (isset($_POST['timetable_edit_nonce']) && wp_verify_nonce($_POST['timetable_edit_nonce'], 'timetable_edit_nonce')) {
+		   $id = sanitize_text_field($_POST['id']);
+			$timetable = $this->my_timetable_controller->get_object_by_id( $id );
+		    $this->render_form_for_edit($timetable);
+			
+		} 
+		
+		//In der Tabelle wird der Button LÖSCHEN geklickt
+		else if (isset($_POST['timetable_loeschen_nonce']) && 
+				wp_verify_nonce($_POST['timetable_loeschen_nonce'], 'timetable_loeschen_nonce')) {
+			$id = sanitize_text_field($_POST['id']);
+			$timetable = $this->my_timetable_controller->get_object_by_id($id);
+
+			// Überprüfen, ob delete_confirmation gesetzt wurde und true ist
+			if (isset($_POST['delete_confirmation']) && $_POST['delete_confirmation'] === 'true') {
+				  // Löschen des Objekts
+				$loesch_result=$this->my_timetable_controller->delete_object($id);
+				$this->render_form();
+				if ($loesch_result==0){
+					echo '<ul class="form_errors"><li>Timetable mit der ID '.$id.' konnte nicht gelöscht werden<br/> '
+							. 'Es sind noch Termine zugeordnet.</li></ul>';
+				}
+				else{
+					echo '<div class="form_success">Timetable mit der ID '.$id.' gelöscht.</div>';
+				}
+			} else {
+				// Zeige den Bestätigungsdialog an, wenn delete_confirmation noch nicht gesetzt ist
+				$this->modal_dialog_delete_check($timetable);
+			}
+		}
+		
+		else{
+			$this->render_form();
+			}
+	}
 		
 		public function render_form(){
 		?>
@@ -72,10 +84,11 @@ public function edit_timetable(){
 			<!-- Hier die Formularfelder für die Dateneingabe -->
 			<input type="text" size="3" name="id" placeholder="id*" value="" readonly>
 		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">			
-			<input type="text" name="beschreibung" placeholder="Beschreibung*">			
-		 	<?php wp_nonce_field( 'timetable_speichern_nonce', 'timetable_speichern_nonce' ); ?>
-			<input type="submit" name="timetable_speichern" value="Hinzufügen">
+			<input type="text" size="40" name="bezeichnung" placeholder="Bezeichnung*">			
+			<input type="text" size="70" name="beschreibung" placeholder="Beschreibung*">			
+		 	<br><br>
+			<?php wp_nonce_field( 'timetable_speichern_nonce', 'timetable_speichern_nonce' ); ?>
+			<input type="submit" name="timetable_speichern" value="Speichern">
 			<input type="submit" value="Abbrechen">
 		</form>
 		</div>
@@ -88,17 +101,18 @@ public function edit_timetable(){
 			<form enctype="multipart/form-data" method="post" action ="" id="tt_timetable_form">
 			<!-- Hier die Formularfelder für die Dateneingabe -->
 			<input type="text" size="3" name="id" placeholder="id*" value="<?php echo $timetable_object->get_id();?>" readonly>			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
+			<input type="text" size="40" name="bezeichnung" placeholder="Bezeichnung*" 
 				   value="<?php echo $timetable_object->get_bezeichnung();?>">			
-			<input type="text" name="beschreibung" placeholder="Beschreibung*" 
+			<input type="text" size="70"  name="beschreibung" placeholder="Beschreibung*" 
 				   value="<?php echo $timetable_object->get_beschreibung();?>">			
 			<br><br>
-		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
-			<input type="submit" name="termin_speichern" value="Speichern">
+		 	<?php wp_nonce_field( 'timetable_speichern_nonce', 'timetable_speichern_nonce' ); ?>
+			<input type="submit" name="timetable_speichern" value="Speichern">
 			<input type="submit" value="Abbrechen">
 		</form>
 		        
       	</div>
+		</div> <!--wrap_termin_hinzufuegen schliessen-->
 		<?php
 		
 	
@@ -109,37 +123,13 @@ public function edit_timetable(){
 			<!-- Hier die Formularfelder für die Dateneingabe -->
 			<input type="text" size="3" name="id" placeholder="id*" value="<?php echo $form_data['id'];?>" readonly>
 
-			<select name="timetable_ID" >
-				<option value="" disabled selected>Timetable wählen...*</option>
-				<?php
-				$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
-				foreach ($timetable_data as $timetable){
-					if ($timetable['id']==$form_data['timetable_ID']){
-						echo '<option value="'.$timetable['id'].'" selected>'.$timetable['id']
-						 .' | '.$timetable['bezeichnung'].'</option>';
-					}
-					else{
-						echo '<option value="'.$timetable['id'].'">'.$timetable['id']
-						 .' | '.$timetable['bezeichnung'].'</option>';
-					}
-				}?>
-				
-			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" 
-				   value="<?php echo $form_data['bildungsgang'];?>">			
 			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
 				   value="<?php echo $form_data['bezeichnung'];?>">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" 
-				   value="<?php echo $form_data['ereignistyp'];?>">			
-			<input type="text" size="10" name="beginn" id="datepicker_begin" 
-				   placeholder="Beginn*" value="<?php echo $form_data['beginn'];?>" readonly>			
-			<input type="text" size="10" name="ende" id="datepicker_end" 
-				   placeholder="Ende*" value="<?php echo $form_data['ende'];?>" readonly       >
-			<input type="text" name="verantwortlich" placeholder="Verantwortlich" 
-				   value="<?php echo $form_data['verantwortlich'];?>"><br><br>
-		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
-			<input type="submit" name="termin_speichern" value="Speichern">
+			<input type="text" name="beschreibung" placeholder="Beschreibung*" 
+				   value="<?php echo $form_data['beschreibung'];?>">			
+			<br><br>
+		 	<?php wp_nonce_field( 'timetable_speichern_nonce', 'timetable_speichern_nonce' ); ?>
+			<input type="submit" name="timetable_speichern" value="Speichern">
 			<input type="submit" value="Abbrechen">
 		</form>
 			<h3>Es sind Fehler aufgetreten</h3>
@@ -159,4 +149,49 @@ public function edit_timetable(){
 		<?php
 		
 	}
+	public function modal_dialog_delete_check($loesch_timetable) {
+    $dialog_text = 'Möchten Sie wirklich den Termin mit der\nID: ' . $loesch_timetable->get_id() . 
+			'\nBezeichnung: ' . $loesch_timetable->get_bezeichnung() . '\nloeschen?';
+    ?>
+    <form id="delete_confirmation_form" method="post" action="">
+        <input type="hidden" id="delete_confirmation" name="delete_confirmation" value="false">
+		 <?php wp_nonce_field('timetable_loeschen_nonce', 'timetable_loeschen_nonce'); ?>
+        <input type="hidden" name="id" value="<?php echo $loesch_timetable->get_id(); ?>">
+    </form>
+    <script>
+        jQuery(document).ready(function($) {
+			 console.log('JavaScript geladen');
+            // Beim Laden der Seite den Bestätigungsdialog anzeigen
+            if (confirm('<?php echo $dialog_text;?>')) {
+				  console.log('Bestätigung erfolgt. Formular wird gesendet.');
+				  
+				 // Sicherstellen, dass das Hidden-Feld existiert und der Wert gesetzt wird
+				var deleteField = document.getElementById('delete_confirmation');
+				if (deleteField) {
+					// Wenn der Benutzer "Ja" klickt, den Wert der versteckten Variable auf true setzen
+					deleteField.value = 'true';
+					console.log('Hidden-Feld erfolgreich auf true gesetzt.');
+				} 
+				else {
+					console.log('Hidden-Feld delete_confirmation nicht gefunden.');
+				}  
+				  
+				 // Sicherstellen, dass das Formular existiert und abgeschickt wird
+			 var deleteForm = document.getElementById('delete_confirmation_form');
+				if (deleteForm) {
+					deleteForm.submit();
+					console.log('Formular wurde abgeschickt.');
+				}
+				else {
+					console.log('Formular delete_confirmation_form nicht gefunden.');
+				}
+			}
+			else{
+				console.log('Bestätigung abgelehnt.');
+					}
+        });
+    </script>
+    <?php
+	}
+	
 }

@@ -32,17 +32,27 @@ class Timetable {
 	private $timetable_objects;
 	private $my_timetable_repository;
 	private $my_Termine_repository;
-	function __construct($id){
-		 $this->id=$id;
-		 $this->initialize_object($id);
-		 
-		 
+	/**Konstruktor mit optionaler ID. Wenn eine ID gesetzt ist, wird ein 
+	 * bestehendes Objekt aus der DB geladen und instanziiert. Wird die ID
+	 * nicht mit angegeben, ist es in der Regel ein Objekt, welches neu angelegt wird.
+	 */
+	function __construct($id=null){
+		$this->my_timetable_repository = new Timetable_repository();	
+		if ($id != null){
+			$this->initialize_object($id);
+		}
+		 else {
+			
+		}
+			 
 	}
 	
 	public function initialize_object($id){
-		$this->my_timetable_repository = new Timetable_repository();
-		 
+		
+		if($id!=false) {
+			$this->id = $id;
 			$timetable_data = $this->my_timetable_repository->find($id);
+			}
 			
 			if ($timetable_data != false){
 				$this->bezeichnung = $timetable_data[0]['bezeichnung'];
@@ -274,8 +284,12 @@ class Timetable {
 	public function set_erzeugt_am( DateTime $erzeugt_am ): void {
 		$this->erzeugt_am = $erzeugt_am;
 	}
+	//Timetable wird gespeichert. Datenbankaufruf in Timetable-Respository gekapselt
+	public function save(){
+		$this->my_timetable_repository->create($this);
+	}
 
-
-
-
+	public function update(){
+			$this->my_timetable_repository->update($this->id, $this);
+		}
 }

@@ -22,7 +22,7 @@ class Termin {
 	function __construct( $termin_beginn, $termin_ende, $bildungsgang, 
 							$bezeichnung, $ereignistyp,$verantwortlich, $timetable_id){
 		//ID wird im Konstruktor weggelassen und beim Erzeugen eines Objekts z.B.
-		//für Änderungen einfach neu gesetzt.
+		//für Änderungen einfach mit setID gesetzt
 		$this->termin_beginn=DateTime::createFromFormat($this->check_datumsformat($termin_beginn), $termin_beginn); 
 		$this->termin_ende=DateTime::createFromFormat($this->check_datumsformat($termin_ende), $termin_ende); 
 		$this->bildungsgang=$bildungsgang;
