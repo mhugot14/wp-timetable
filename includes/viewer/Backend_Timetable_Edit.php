@@ -67,6 +67,7 @@ public function edit_timetable(){
 				}
 			} else {
 				// Zeige den Bestätigungsdialog an, wenn delete_confirmation noch nicht gesetzt ist
+				$this->render_form();
 				$this->modal_dialog_delete_check($timetable);
 			}
 		}
