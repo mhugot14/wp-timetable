@@ -54,7 +54,7 @@ class Timetable {
 			$timetable_data = $this->my_timetable_repository->find($id);
 			}
 			
-			if ($timetable_data != false){
+			if ($timetable_data != false OR !empty($timetable_data)){
 				$this->bezeichnung = $timetable_data[0]['bezeichnung'];
 				$this->beschreibung= $timetable_data[0]['beschreibung'];
 				$date_time_object = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
@@ -63,6 +63,7 @@ class Timetable {
 				}else {
 					 // Handle den Fall, in dem das DateTime-Objekt nicht erstellt werden konnte
 					  echo "Das Datenbank-Datum der Timetable konnte nicht erzeugt werden";
+					  $this->erzeugt_am = new DateTime();
 				}
 				
 				$this->timetable_objects=$this->termine_to_objects();
