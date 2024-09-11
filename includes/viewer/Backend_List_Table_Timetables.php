@@ -120,11 +120,21 @@ class Backend_List_Table_Timetables extends \WP_List_Table {
     }
 
     private function sort_data($a, $b) {
-        $orderby = 'id';
-        $order = 'asc';
+		
+        // Set defaults
+		$sorting = $this->get_sorting_preferences();
+		if (!empty($sorting)){
+			$orderby = $sorting['orderby'];
+			$order = $sorting['order'];
+		}
+		else{
+			$orderby = 'id';
+			$order = 'asc';
+		}
 
         if (!empty($_GET['orderby'])) {
             $orderby = $_GET['orderby'];
+			 $this->save_sorting_preferences(esc_attr($_GET['orderby']), esc_attr($_GET['order']));
         }
 
         if (!empty($_GET['order'])) {
@@ -139,4 +149,29 @@ class Backend_List_Table_Timetables extends \WP_List_Table {
 
         return ($order === 'asc') ? $result : -$result;
     }
+	
+	//Funktion zum Speichern der der Sortierreihenfolge in Meta-User von WP
+	function save_sorting_preferences($orderby, $order) {
+		$user_id = get_current_user_id();
+		if ($user_id) {
+			update_user_meta($user_id, 'timetable_orderby', $orderby);
+			update_user_meta($user_id, 'timetable_order', $order);
+		}
+	}
+	
+	//Funktion zum Speichern der der Sortierreihenfolge in Meta-User von WP
+	function get_sorting_preferences() {
+		$user_id = get_current_user_id();
+		if ($user_id) {
+			$orderby = get_user_meta($user_id, 'timetable_orderby', true);
+			$order = get_user_meta($user_id, 'timetable_order', true);
+
+			return [
+				'orderby' => $orderby ?: 'id', // Standardwert 'id' verwenden, wenn kein Wert gespeichert wurde
+				'order' => $order ?: 'asc',     // Standardwert 'asc' verwenden
+			];
+		}
+		return ['orderby' => 'id', 'order' => 'asc'];
+	}
+	
 }

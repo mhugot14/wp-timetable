@@ -66,7 +66,7 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 				return "no value";
 		}
 	}
-	
+	//Aktionen in der der letzten Tabellenspalte Aktionen
 	public function column_actions($item){
     $nonce_field_edit=wp_nonce_field( 'termin_edit_nonce', 'termin_edit_nonce' );
     echo sprintf(
@@ -128,8 +128,15 @@ class Backend_List_Table_Termine extends \WP_List_Table {
     private function sort_data( $a, $b )
 	{
 		// Set defaults
-		$orderby = 'id';
-		$order = 'asc';
+		$sorting = $this->get_sorting_preferences();
+		if (!empty($sorting)){
+			$orderby = $sorting['orderby'];
+			$order = $sorting['order'];
+		}
+		else{
+			$orderby = 'id';
+			$order = 'asc';
+		}
 
 		// If orderby is set, use this as the sort column
 		if(!empty($_GET['orderby']))
@@ -140,7 +147,8 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 		// If order is set use this as the order
 		if(!empty($_GET['order']))
 		{
-			$order = $_GET['order'];
+			 $order = $_GET['order'];
+			 $this->save_sorting_preferences(esc_attr($_GET['orderby']), esc_attr($_GET['order']));
 		}
 
 		// Convert string IDs to integers for numerical comparison
@@ -162,5 +170,28 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 
 		return -$result;
 	}
-		
+	
+	//Funktion zum Speichern der der Sortierreihenfolge in Meta-User von WP
+	function save_sorting_preferences($orderby, $order) {
+		$user_id = get_current_user_id();
+		if ($user_id) {
+			update_user_meta($user_id, 'termine_orderby', $orderby);
+			update_user_meta($user_id, 'termine_order', $order);
+		}
+	}
+	
+	//Funktion zum Speichern der der Sortierreihenfolge in Meta-User von WP
+	function get_sorting_preferences() {
+		$user_id = get_current_user_id();
+		if ($user_id) {
+			$orderby = get_user_meta($user_id, 'termine_orderby', true);
+			$order = get_user_meta($user_id, 'termine_order', true);
+
+			return [
+				'orderby' => $orderby ?: 'id', // Standardwert 'id' verwenden, wenn kein Wert gespeichert wurde
+				'order' => $order ?: 'asc',     // Standardwert 'asc' verwenden
+			];
+		}
+		return ['orderby' => 'id', 'order' => 'asc'];
+	}
 }
