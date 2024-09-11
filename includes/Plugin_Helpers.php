@@ -9,7 +9,16 @@ class Plugin_Helpers{
 	public static function activate(): void{
 		/*Hier passiert das, was passiert, wenn das Plugin aktiviert wird
 		  */
-		
+		 global $mh_tt_db_version;
+        $mh_tt_db_version = '1.1';  // Setze die neue Datenbank-Version
+
+        // Überprüfen, ob ein Datenbank-Update notwendig ist
+        if (get_site_option('mh_tt_db_version') != $mh_tt_db_version) {
+            self::update_db_schema();
+        }
+
+	}
+	public static function update_db_schema(){
 		wp_schedule_event(time() - DAY_IN_SECONDS,'weekly','timetable/weekly_cron');
 		
 		//Tabellen anlegen
@@ -49,7 +58,9 @@ class Plugin_Helpers{
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 			dbDelta($sql_tt_termine);
 			dbDelta($sql_tt_timetable);
-			dbDelta($sql_tt_timetable_data);	
+			//dbDelta($sql_tt_timetable_data);	
+		//Die DB-Version wird auf die neuste Version gesetzt.	
+		update_option('mh_tt_db_version', '1.1');
 	}
 		
 	
