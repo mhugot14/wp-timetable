@@ -36,6 +36,7 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 	
 	public function get_columns(){
 		$columns = array(
+			 'cb' => '<input type="checkbox" />',  // Checkbox-Spalte für Mehrfachauswahl
 			'id' => 'ID',
 			'bildungsgang' => 'Bildungsgang',
 			'bezeichnung' => 'Bezeichnung',
@@ -66,6 +67,19 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 				return "no value";
 		}
 	}
+	
+	public function column_cb($item) {
+    return sprintf(
+        '<input type="checkbox" name="bulk-delete[]" value="%s" />', $item['id']
+    );
+}
+
+	public function get_bulk_actions() {
+		$actions = [
+			'bulk-delete' => 'Löschen'
+		];
+		return $actions;
+}
 	//Aktionen in der der letzten Tabellenspalte Aktionen
 	public function column_actions($item){
     $nonce_field_edit=wp_nonce_field( 'termin_edit_nonce', 'termin_edit_nonce' );
