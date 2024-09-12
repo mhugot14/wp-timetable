@@ -158,22 +158,24 @@ class View{
 			?>
 		<form method="post">
 			<div class="list_table">
-		<?php
-		if ($typ=="timetables"){
-			$table = new Backend_List_Table_Timetables();
-			$table->set_data( $this->my_timetable_repository->get_data() );
-		}
-		
-		else if ($typ=="termine"){
-			$table = new Backend_List_Table_Termine();
-			$table->set_data( $this->my_termine_repository->get_data() );
-		}
-		else{
-			echo '<p style="color:red;">Kenne den Typ nicht<p>';
-		}
-		$table->prepare_items();
-		$table->display();
-	    	?>
+			<?php
+			if ($typ=="timetables"){
+				$table = new Backend_List_Table_Timetables();
+				$table->process_bulk_action();
+				$table->set_data( $this->my_timetable_repository->get_data() );
+			}
+
+			else if ($typ=="termine"){
+				$table = new Backend_List_Table_Termine();
+				$table->process_bulk_action();
+				$table->set_data( $this->my_termine_repository->get_data() );
+			}
+			else{
+				echo '<p style="color:red;">Kenne den Typ nicht<p>';
+			}
+			$table->prepare_items();
+			$table->display();
+				?>
 		</form>
 			</div>
 	

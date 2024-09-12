@@ -5,10 +5,12 @@ namespace timetable;
  * Click nbfs://nbhost/SystemFileSystem/Templates/Scripting/EmptyPHP.php to edit this template
  */
 require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
+require_once MH_TT_PATH. 'includes/controller/Termin_controller.php';
 
 class Backend_List_Table_Termine extends \WP_List_Table {
 	
 	private $data;
+	private $my_termin_controller;
 	
     public function __construct() {
         parent::__construct([
@@ -17,7 +19,8 @@ class Backend_List_Table_Termine extends \WP_List_Table {
             'ajax'     => false,
 			'screen'   => null
         ]);
-
+		
+		$this->my_termin_controller=new Termin_controller();
 
 	}
    
@@ -76,7 +79,8 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 
 	public function get_bulk_actions() {
 		$actions = [
-			'bulk-delete' => 'Löschen'
+			'bulk-delete' => 'Löschen',
+			'bulk-edit' => 'Mehrfachänderung'
 		];
 		return $actions;
 }
@@ -87,7 +91,7 @@ class Backend_List_Table_Termine extends \WP_List_Table {
         '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
 				<input type="hidden" name="id" value="%s">
 			%s	
-            <button type="submit" name="termin_edit">Edit</button>
+            <button type="submit" name="edit_termin_button">Edit</button>
         </form>',
         $item['id'],
 		$nonce_field_edit
@@ -98,7 +102,7 @@ class Backend_List_Table_Termine extends \WP_List_Table {
         '<form enctype="multipart/form-data" method="post" action="" style="display: inline-block;">
 			<input type="hidden" name="id" value="%s">
 			%s	
-            <button type="submit">Löschen</button>
+            <button type="submit" name="loeschen_termin_button">Löschen</button>
         </form>',
         $item['id'],
 		$nonce_field_loeschen
@@ -208,4 +212,33 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 		}
 		return ['orderby' => 'id', 'order' => 'asc'];
 	}
+	
+	//Methode für die Durchführung der Bulk-Actions
+		public function process_bulk_action() {
+		// Prüfe, ob die "Löschen"-Aktion ausgeführt wird
+		if ('bulk-delete' === $this->current_action()) {
+			// Hole die ausgewählten IDs aus dem POST-Request
+			$delete_ids = $_POST['bulk-delete'];
+
+			// Lösche jeden Eintrag anhand der ID
+			foreach ($delete_ids as $id) {
+				// Führe deine Löschlogik hier aus
+				$this->my_termin_controller->delete_object($id);
+			}
+			
+		}
+		else if ('bulk-edit' === $this->current_action())
+		{
+			echo "Bulk Action edit";
+			$update_ids = $_POST['bulk-delete'];	
+			
+			$errors = $this->my_termin_controller->process_bulk_edit($update_ids,$_POST);
+				if (!empty($errors)) {
+					// Es gibt Fehler, das Formular mit Fehlermeldungen rendern
+					
+				} else {
+				//   $this->render_form()
+				}
+			}
+		}		
 }

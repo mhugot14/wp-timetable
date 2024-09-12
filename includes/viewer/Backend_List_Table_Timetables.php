@@ -38,6 +38,7 @@ class Backend_List_Table_Timetables extends \WP_List_Table {
     }
 
     public function prepare_items() {
+		$this->process_bulk_action();
         $this->items = $this->data;
         $columns = $this->get_columns();
         $hidden = $this->get_hidden_columns();
@@ -172,6 +173,33 @@ class Backend_List_Table_Timetables extends \WP_List_Table {
 			];
 		}
 		return ['orderby' => 'id', 'order' => 'asc'];
+	}
+	
+	//Methode für die Durchführung der Bulk-Actions
+		public function process_bulk_action() {
+		// Prüfe, ob die "Löschen"-Aktion ausgeführt wird
+		if ('bulk-delete' === $this->current_action()) {
+			// Hole die ausgewählten IDs aus dem POST-Request
+			$delete_ids = $_POST['bulk-delete'];
+
+			// Lösche jeden Eintrag anhand der ID
+			foreach ($delete_ids as $id) {
+				// Führe deine Löschlogik hier aus
+				$this->my_termin_controller->delete_object($id);
+				
+			}
+			$this->prepare_items();
+		}
+		else if ('bulk-edit' === $this->current_action())
+		{
+			echo "Bulk Action edit";
+			$update_ids = $_POST['bulk-edit'];
+			
+			foreach ($update_ids as $id) {
+			
+			}
+			
+		}
 	}
 	
 }

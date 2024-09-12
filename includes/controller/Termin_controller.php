@@ -28,6 +28,58 @@ class Termin_controller implements Controller_interface {
 		$this->my_termin_repository= new Termine_repository; 
 	}
 	
+	public function process_bulk_edit($ids,$form_data){
+		$san_data=[];
+		
+		 if (!empty($form_data['timetable_ID'])){
+			$san_data['timetable_ID'] = sanitize_text_field($form_data['timetable_ID']);
+		 } 
+		if (!empty($form_data['bezeichnung'])){		 
+			$san_data['bezeichnung'] = sanitize_text_field($form_data['bezeichnung']);
+		 }
+		 if (!empty($form_data['bildgungsgang'])){		 
+			$san_data['bildungsgang'] = sanitize_text_field($form_data['bildungsgang']);
+	  }
+		if (!empty($form_data['beginn'])){		 
+			$san_data['beginn'] = sanitize_text_field($form_data['beginn']);
+	   }
+	    if (!empty($form_data['ende'])){		 
+			$san_data['ende'] = sanitize_text_field($form_data['ende']);
+		}
+		if (!empty($form_data['verantwortlich'])){		 
+			 $san_data['verantwortlich'] = sanitize_text_field($form_data['verantwortlich']);
+		 }
+		 if (!empty($form_data['ereignistyp'])){		 
+			 $san_data['ereignistyp'] = sanitize_text_field($form_data['ereignistyp']);
+		 }
+		$errors;
+		 // Mapping der Array-Schlüssel zu den Methoden des Objekts
+		$field_to_method = [
+			'timetable_ID' => 'set_timetable_ID',
+			'bezeichnung' => 'set_bezeichnung',
+			'bildungsgang' => 'set_bildungsgang',
+			'beginn' => 'set_beginn',
+			'ende' => 'set_ende',
+			'verantwortlich' => 'set_verantwortlich',
+			'ereignistyp' => 'set_ereignistyp',
+		];
+		
+		foreach ($ids as $id) {
+			$edit_termin= $this->get_object_by_id( $id );
+			
+			foreach ($san_data as $field => $value) {
+                if (isset($field_to_method[$field])) {
+                    // Rufe die entsprechende Methode des Objekts dynamisch auf
+                    $method = $field_to_method[$field];
+                    if (method_exists($edit_termin, $method)) {
+                        call_user_func([$edit_termin, $method], $value);
+                    }
+                }
+            }	
+		}
+	}
+	
+	
 	public function process_form_submission($form_data){
 		
 		if (!isset($form_data['termin_speichern_nonce']) || 

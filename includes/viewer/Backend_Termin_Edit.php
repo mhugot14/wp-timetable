@@ -75,14 +75,14 @@ class Backend_Termin_Edit {
 			}
 		} 
 		//In der Tabelle wird der Button BEARBEITEN gedruckt.
-		else if (isset($_POST['termin_edit_nonce']) && wp_verify_nonce($_POST['termin_edit_nonce'], 'termin_edit_nonce')) {
+		else if (isset($_POST['termin_edit_nonce']) && wp_verify_nonce($_POST['termin_edit_nonce'], 'termin_edit_nonce' ) && isset($_POST['edit_termin_button'])) {
 		   $id = sanitize_text_field($_POST['id']);
 			$termin = $this->my_termin_controller->get_object_by_id( $id );
 		    $this->render_form_for_edit( $termin);
 			
 		} 
 		//In der Tabelle wird der Button LÖSCHEN geklickt
-		else if (isset($_POST['termin_loeschen_nonce']) && wp_verify_nonce($_POST['termin_loeschen_nonce'], 'termin_loeschen_nonce')) {
+		else if (isset($_POST['termin_loeschen_nonce']) && wp_verify_nonce($_POST['termin_loeschen_nonce'], 'termin_loeschen_nonce') && isset($_POST['loeschen_termin_button'])) {
 			$id = sanitize_text_field($_POST['id']);
 			$termin = $this->my_termin_controller->get_object_by_id($id);
 
@@ -180,6 +180,7 @@ class Backend_Termin_Edit {
 		</form>
 		        
       	</div>
+		</div>
 		<?php
 		
 	
@@ -247,6 +248,7 @@ class Backend_Termin_Edit {
         <input type="hidden" id="delete_confirmation" name="delete_confirmation" value="false">
 		 <?php wp_nonce_field('termin_loeschen_nonce', 'termin_loeschen_nonce'); ?>
         <input type="hidden" name="id" value="<?php echo $loesch_termin->get_id(); ?>">
+		<input type="hidden" name="loeschen_termin_button" value="">
     </form>
     <script>
         jQuery(document).ready(function($) {
