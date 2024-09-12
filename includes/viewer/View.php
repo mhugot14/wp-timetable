@@ -154,7 +154,11 @@ class View{
 	
 	public function create_backend_table($typ){
 		$table= null;
-		echo'<div class="list_table">';
+			//Form einfügen
+			?>
+		<form method="post">
+			<div class="list_table">
+		<?php
 		if ($typ=="timetables"){
 			$table = new Backend_List_Table_Timetables();
 			$table->set_data( $this->my_timetable_repository->get_data() );
@@ -169,8 +173,8 @@ class View{
 		}
 		$table->prepare_items();
 		$table->display();
-	    ?>
-		
+	    	?>
+		</form>
 			</div>
 	
 		<?php
