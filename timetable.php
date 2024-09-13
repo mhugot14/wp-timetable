@@ -32,5 +32,6 @@ require_once __DIR__ . '/includes/viewer/View.php';
 		MH_TT_FILE, 
 		['timetable\Plugin_Helpers' ,'activate']
 		);
+	
 	//startet die Ausgabe
 	new View();

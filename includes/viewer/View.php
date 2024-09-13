@@ -30,7 +30,8 @@ class View{
 		$this->my_timetable_repository = new Timetable_repository();
 		
 		add_action('admin_menu', [$this, 'create_menu']);
-		add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
+	//	add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
+		add_action('admin_enqueue_scripts', [$this, 'admin_javascript']);
 			
 		//add_action('add_meta_boxes', [$this,'register_metaboxes']);
 		//add_filter('meta_box_location', [$this,'my_meta_box_location'], 10, 3);
@@ -156,7 +157,7 @@ class View{
 		$table= null;
 			//Form einfügen
 			?>
-		<form method="post">
+		<form method="post" id="bulkEditForm">
 			<div class="list_table">
 			<?php
 			if ($typ=="timetables"){
@@ -241,14 +242,19 @@ class View{
     wp_enqueue_style( 'custom-admin-style' );
 	}
 	
-	// Funktion zum Einbinden des Datepickers
-	public function timetable_enqueue_datepicker() {
+	public  function admin_javascript() {
+        // Pfad zu deiner JavaScript-Datei anpassen
+	    $skriptpfad = plugin_dir_url(__FILE__) . 'mh_tt_javascript.js';
+        wp_enqueue_script('mh_tt_javascript',$skriptpfad , array('jquery'), null, true);
 		// jQuery UI Datepicker-Skript einbinden
 		wp_enqueue_script('jquery-ui-datepicker');
-
 		// jQuery UI Datepicker-Stil einbinden
 		wp_enqueue_style('jquery-ui-datepicker-style', 'https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/smoothness/jquery-ui.css');
-	}
+		
+		
+		error_log("admin_javascript() wurde aufgerufen");
+    echo '<script>console.log("admin_javascript() wurde aufgerufen");</script>';
+    }
 
 }	
 

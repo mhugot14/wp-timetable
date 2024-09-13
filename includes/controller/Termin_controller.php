@@ -41,10 +41,30 @@ class Termin_controller implements Controller_interface {
 			$san_data['bildungsgang'] = sanitize_text_field($form_data['bildungsgang']);
 	  }
 		if (!empty($form_data['beginn'])){		 
-			$san_data['beginn'] = sanitize_text_field($form_data['beginn']);
+			$sanitized_beginn = sanitize_text_field($form_data['beginn']);
+				// Versuche, ein DateTime-Objekt zu erstellen
+			$date_object = DateTime::createFromFormat('Y-m-d', $sanitized_beginn);
+			    // Prüfe, ob das DateTime-Objekt korrekt erstellt wurde
+			if ($date_object !== false) {
+				// Speichere das DateTime-Objekt in $san_data
+				$san_data['beginn'] = $date_object;
+			} else {
+			// Optional: Fehlerbehandlung, falls das Format falsch ist
+				echo "Ungültiges Datumsformat. Erwartet: Y-m-d";
+			}
 	   }
 	    if (!empty($form_data['ende'])){		 
-			$san_data['ende'] = sanitize_text_field($form_data['ende']);
+			$sanitized_ende = sanitize_text_field($form_data['ende']);
+				// Versuche, ein DateTime-Objekt zu erstellen
+			$date_object = DateTime::createFromFormat('Y-m-d', $sanitized_ende);
+			    // Prüfe, ob das DateTime-Objekt korrekt erstellt wurde
+			if ($date_object !== false) {
+				// Speichere das DateTime-Objekt in $san_data
+				$san_data['ende'] = $date_object;
+			} else {
+			// Optional: Fehlerbehandlung, falls das Format falsch ist
+				echo "Ungültiges Datumsformat. Erwartet: Y-m-d";
+			}
 		}
 		if (!empty($form_data['verantwortlich'])){		 
 			 $san_data['verantwortlich'] = sanitize_text_field($form_data['verantwortlich']);
@@ -58,8 +78,8 @@ class Termin_controller implements Controller_interface {
 			'timetable_ID' => 'set_timetable_ID',
 			'bezeichnung' => 'set_bezeichnung',
 			'bildungsgang' => 'set_bildungsgang',
-			'beginn' => 'set_beginn',
-			'ende' => 'set_ende',
+			'beginn' => 'set_termin_beginn',
+			'ende' => 'set_termin_ende',
 			'verantwortlich' => 'set_verantwortlich',
 			'ereignistyp' => 'set_ereignistyp',
 		];
@@ -75,7 +95,8 @@ class Termin_controller implements Controller_interface {
                         call_user_func([$edit_termin, $method], $value);
                     }
                 }
-            }	
+            }
+			$edit_termin->update();
 		}
 	}
 	

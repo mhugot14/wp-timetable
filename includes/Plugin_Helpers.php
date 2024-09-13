@@ -62,8 +62,8 @@ class Plugin_Helpers{
 		//Die DB-Version wird auf die neuste Version gesetzt.	
 		update_option('mh_tt_db_version', '1.1');
 	}
-		
 	
+
 	public  static function strichSeparator(string $text): array{
 		 $arraytext = array();
 		 

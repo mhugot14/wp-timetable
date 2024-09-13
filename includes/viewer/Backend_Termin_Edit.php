@@ -55,7 +55,6 @@ class Backend_Termin_Edit {
 					dateFormat: 'yy-mm-dd' 
 				});
 			});
-
 		</script>
 		<div class="wrap_termin_hinzufuegen">
 		<h2>Termin hinzufügen oder ändern</h2>
@@ -133,7 +132,7 @@ class Backend_Termin_Edit {
 			<input type="text" name="verantwortlich" placeholder="Verantwortlich"><br><br>
 		 	<?php wp_nonce_field( 'termin_speichern_nonce', 'termin_speichern_nonce' ); ?>
 			<input type="submit" name="termin_speichern" value="Speichern">
-			<input type="submit" value="Abbrechen">
+			<input type="submit" onclick="jstest()" value="Abbrechen">
 		</form>
 		</div>
 		</div> <!--wrap_termin_hinzufuegen schliessen-->

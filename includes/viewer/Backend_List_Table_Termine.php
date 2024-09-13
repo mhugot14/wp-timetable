@@ -218,27 +218,33 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 		// Prüfe, ob die "Löschen"-Aktion ausgeführt wird
 		if ('bulk-delete' === $this->current_action()) {
 			// Hole die ausgewählten IDs aus dem POST-Request
-			$delete_ids = $_POST['bulk-delete'];
-
-			// Lösche jeden Eintrag anhand der ID
-			foreach ($delete_ids as $id) {
-				// Führe deine Löschlogik hier aus
-				$this->my_termin_controller->delete_object($id);
-			}
 			
+			
+			if(!empty($_POST['bulk-delete'])){
+			$delete_ids = $_POST['bulk-delete'];	
+				echo '<div class="form_success">Die Termine mit den IDs ';
+				// Lösche jeden Eintrag anhand der ID
+				foreach ($delete_ids as $id) {
+					// Führe deine Löschlogik hier aus
+					$this->my_termin_controller->delete_object($id);
+					echo $id.',  ';
+				}
+				echo 'wurden gelöscht.</div>';	
+			}
+			else{
+				echo '<ul class=form_errors><li>Keine Datensätze ausgewählt</li></ul>';
+			}
 		}
 		else if ('bulk-edit' === $this->current_action())
 		{
-			echo "Bulk Action edit";
-			$update_ids = $_POST['bulk-delete'];	
-			
-			$errors = $this->my_termin_controller->process_bulk_edit($update_ids,$_POST);
-				if (!empty($errors)) {
-					// Es gibt Fehler, das Formular mit Fehlermeldungen rendern
-					
-				} else {
-				//   $this->render_form()
-				}
+			if(!empty($_POST['bulk-delete'])){
+				$update_ids = $_POST['bulk-delete'];	
+				$this->my_termin_controller->process_bulk_edit($update_ids,$_POST);
+				echo '<div class=form_success>Die ausgewählten Datensätze wurden geändert.</div>';
 			}
-		}		
+			else {
+				echo '<ul class=form_errors><li>Keine Datensätze ausgewählt</li></ul>';
+			}
+		}
+	}		
 }
