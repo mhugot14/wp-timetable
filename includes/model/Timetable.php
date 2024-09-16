@@ -57,12 +57,12 @@ class Timetable {
 			if ($timetable_data != false OR !empty($timetable_data)){
 				$this->bezeichnung = $timetable_data[0]['bezeichnung'];
 				$this->beschreibung= $timetable_data[0]['beschreibung'];
-				$date_time_object = DateTime::createFromFormat('Y-m-d', $timetable_data[0]['erzeugt_am']);
+				$date_time_object = DateTime::createFromFormat('Y-m-d H:i:s', $timetable_data[0]['erzeugt_am']);
 				if ($date_time_object!== FALSE){
 					$this->erzeugt_am = $date_time_object; 
 				}else {
 					 // Handle den Fall, in dem das DateTime-Objekt nicht erstellt werden konnte
-					  echo "Das Datenbank-Datum der Timetable konnte nicht erzeugt werden";
+					  echo '<ul class="form_erros"><li>Das Datenbank-Datum der Timetable konnte nicht erzeugt werden</li></ul>';
 					  $this->erzeugt_am = new DateTime();
 				}
 				
