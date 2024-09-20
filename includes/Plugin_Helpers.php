@@ -10,7 +10,7 @@ class Plugin_Helpers{
 		/*Hier passiert das, was passiert, wenn das Plugin aktiviert wird
 		  */
 		 global $mh_tt_db_version;
-        $mh_tt_db_version = '1.10';  // Setze die neue Datenbank-Version
+        $mh_tt_db_version = '1.11';  // Setze die neue Datenbank-Version
 
         // Überprüfen, ob ein Datenbank-Update notwendig ist
         if (get_site_option('mh_tt_db_version') != $mh_tt_db_version) {
@@ -43,7 +43,7 @@ class Plugin_Helpers{
 		$sql_tt_timetable = "CREATE TABLE `$tt_timetable` (
     `id` int(10) NOT NULL AUTO_INCREMENT ,
     `bezeichnung` varchar(30) NOT NULL,
-    `beschreibung` varchar(50) NOT NULL,
+    `beschreibung` varchar(100) NOT NULL,
     `erzeugt_am` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB  $charset_collate;";
@@ -64,7 +64,7 @@ class Plugin_Helpers{
 			dbDelta($sql_tt_timetable);
 			//dbDelta($sql_tt_timetable_data);	
 		//Die DB-Version wird auf die neuste Version gesetzt.	
-		update_option('mh_tt_db_version', '1.10');
+		update_option('mh_tt_db_version', '1.11');
 	}
 	
 
