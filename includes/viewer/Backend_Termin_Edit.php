@@ -29,33 +29,35 @@ class Backend_Termin_Edit {
 		?>	
 		<script>
 			jQuery(document).ready(function($) {
-				// Datepicker für das Feld mit der ID "datepicker_begin" aktivieren
+				// Datepicker für "Begin"
 				$('#datepicker_begin').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
 					beforeShow: function(input, inst) {
 						$(input).prop('readonly', true);
 					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
 					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd'
+					buttonImage: "<?php echo $icon_url; ?>", 
+					buttonImageOnly: true,
+					dateFormat: 'yy-mm-dd',
+					onSelect: function(selectedDate) {
+						// Wenn "Ende"-Datum leer ist, setzen wir es auf das gleiche Datum
+						if ($('#datepicker_end').val() === '') {
+							$('#datepicker_end').datepicker('setDate', selectedDate);
+						}
+					}
 				});
 
-				// Datepicker für das Feld mit der ID "datepicker_end" aktivieren
+				// Datepicker für "Ende"
 				$('#datepicker_end').datepicker({
-					// Deaktiviere die manuelle Eingabe im Textfeld
 					beforeShow: function(input, inst) {
 						$(input).prop('readonly', true);
 					},
-					// Zeige den Datepicker nur beim Klick auf eine Schaltfläche
 					showOn: "button",
-					buttonImage: "<?php echo $icon_url; ?>", // Passe den Pfad zur Schaltfläche an
-					buttonImageOnly: true, // Zeige nur das Bild, keine Schaltfläche mit Text
-					dateFormat: 'yy-mm-dd' 
+					buttonImage: "<?php echo $icon_url; ?>", 
+					buttonImageOnly: true,
+					dateFormat: 'yy-mm-dd'
 				});
 			});
-		</script>
+			</script>
 		<div class="wrap_termin_hinzufuegen">
 		<h2>Termin hinzufügen oder ändern</h2>
 		
