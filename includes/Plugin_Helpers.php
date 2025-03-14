@@ -16,8 +16,68 @@ class Plugin_Helpers{
         if (get_site_option('mh_tt_db_version') != $mh_tt_db_version) {
             self::update_db_schema();
         }
+		 error_log("🚀 activate() wurde aufgerufen!");
+		
+		//self::wp_timetable_register_taxonomy_ereignistyp();
+		//self::wp_timetable_add_default_ereignistypen();
 
 	}
+	
+	static public function wp_timetable_register_taxonomy_ereignistyp() {
+		 add_action('init', function () {
+			 register_taxonomy('ereignistyp', null, [
+			'labels' => [
+				'name'              => __('Ereignistypen', 'timetables'),
+				'singular_name'     => __('Ereignistyp', 'timetables'),
+				'menu_name'         => __('Ereignistypen', 'timetables'),
+				'all_items'         => __('Alle Ereignistypen', 'timetables'),
+				'edit_item'         => __('Ereignistyp bearbeiten', 'timetables'),
+				'view_item'         => __('Ereignistyp ansehen', 'timetables'),
+				'update_item'       => __('Ereignistyp aktualisieren', 'timetables'),
+				'add_new_item'      => __('Neuen Ereignistyp hinzufügen', 'timetables'), // ÄNDERT "Schlagwort anlegen"
+				'new_item_name'     => __('Name des neuen Ereignistyps', 'timetables'), // ÄNDERT "Neues Schlagwort"
+				'search_items'      => __('Ereignistyp suchen', 'timetables'),
+				'popular_items'     => __('Beliebte Ereignistypen', 'timetables'),
+				'separate_items_with_commas' => __('Ereignistypen durch Kommas trennen', 'timetables'),
+				'add_or_remove_items' => __('Ereignistyp hinzufügen oder entfernen', 'timetables'),
+				'choose_from_most_used' => __('Wähle aus den am häufigsten verwendeten', 'timetables'),
+				'not_found'         => __('Keine Ereignistypen gefunden.', 'timetables'),
+			],
+			'public'            => true,
+			'hierarchical'      => false, 
+			'show_admin_column' => true,
+			'show_ui'           => true,
+			'show_in_menu'      => true,
+			'show_in_rest'      => true,
+		]);
+		});
+	}
+	static public function wp_timetable_add_default_ereignistypen() {
+    // Standard-Ereignistypen definieren
+    $default_types = [
+        ['name' => 'ZK', 'description' => 'Zeugniskonferenzen.', 'color' => '#704E2E'],
+        ['name' => 'ZA', 'description' => 'Zeugnisausgabe', 'color' => '#2E4756'],
+        ['name' => 'NE', 'description' => 'Noteneingabe', 'color' => '#7BB7AF'],
+        ['name' => 'APA', 'description' => 'Allgemeiner Prüfungsausschuss.', 'color' => '#B98DA0'],
+		['name' => 'SONSTIGES', 'description' => 'Sonstiges', 'color' => '#D5C3C9'],
+    ];
+
+    foreach ($default_types as $type) {
+        // Prüfen, ob der Ereignistyp schon existiert
+        if (!term_exists($type['name'], 'ereignistyp')) {
+            // Ereignistyp mit Beschreibung anlegen
+            $term = wp_insert_term($type['name'], 'ereignistyp', [
+                'description' => $type['description']
+            ]);
+
+            if (!is_wp_error($term) && isset($term['term_id'])) {
+                // Farbe als Metadaten speichern
+                update_term_meta($term['term_id'], 'ereignisfarbe', $type['color']);
+            }
+        }
+    }
+}
+	
 	public static function update_db_schema(){
 		wp_schedule_event(time() - DAY_IN_SECONDS,'weekly','timetable/weekly_cron');
 		

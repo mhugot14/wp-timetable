@@ -96,6 +96,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 .timetablegrid td.today{
     background-color: #ff9999;
 }
+/* JETZT DYNAMISCH
 .td_ZK{
     background-color: #704E2E;
     color: white;
@@ -114,7 +115,7 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 .td_Sonstiges{
     background-color:#D5C3C9;
 }
-
+*/
 .td_ende{
     background-color: #DBC2CF;
 }

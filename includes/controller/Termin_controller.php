@@ -355,4 +355,31 @@ class Termin_controller implements Controller_interface {
 		$ergebnis.='</p>';
 		return $ergebnis; // oder geben Sie die verarbeiteten Daten zurück, wenn nötig
 	}
+	
+	public function get_filtered_termine($bildungsgang, $ereignistyp, $timetable) {
+		global $wpdb;
+		$table_name = $wpdb->prefix . 'tt_termine';
+
+		// 🟢 Basis-SQL-Abfrage
+		$sql = "SELECT * FROM $table_name WHERE 1=1";
+
+		// 🟢 Dynamisch Filter hinzufügen
+		$params = [];
+		if (!empty($bildungsgang)) {
+			$sql .= " AND bildungsgang = %s";
+			$params[] = $bildungsgang;
+		}
+		if (!empty($ereignistyp)) {
+			$sql .= " AND ereignistyp = %s";
+			$params[] = $ereignistyp;
+		}
+		if (!empty($timetable)) {
+			$sql .= " AND timetable_ID = %d";
+			$params[] = $timetable;
+		}
+
+		// 🟢 Query ausführen
+		return $wpdb->get_results($wpdb->prepare($sql, ...$params), ARRAY_A);
+	}
+
 }

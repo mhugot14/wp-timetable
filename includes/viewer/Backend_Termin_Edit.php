@@ -17,11 +17,15 @@ require_once MH_TT_PATH. 'includes/controller/Timetable_controller.php';
  */
 class Backend_Termin_Edit {
 	
-	private $my_termin_controller, $my_timetable_controller;
+	private $my_termin_controller, $my_timetable_controller, $my_einstellungen_controller,
+			$bildungsgaenge, $ereignistypen;
 	
 	public function __construct(){
 		$this->my_termin_controller = new Termin_controller();
 		$this->my_timetable_controller = new Timetable_controller();
+		$this->my_einstellungen_controller = new Einstellungen_controller();
+		$this->bildungsgaenge = $this->my_einstellungen_controller->get_bildungsgaenge();
+		$this->ereignistypen = $this->my_einstellungen_controller->get_ereignistypen();
 	}
 		
 	public function edit_termin(){
@@ -125,10 +129,24 @@ class Backend_Termin_Edit {
 				}?>
 				
 			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*">			
-			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*">			
+		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->		
+			<select name="bildungsgang" >
+				<option value="" disabled selected>Bildungsgang wählen...*</option>
+				<?php
+				foreach ($this->bildungsgaenge as $bildungsgang){
+					echo '<option value="'.$bildungsgang->name.'">'.$bildungsgang->name.'</option>';
+				}?>
+				
+			</select>		
+			<input type="text" name="bezeichnung" placeholder="Bezeichnung*">
+			<select name="ereignistyp" >
+				<option value="" disabled selected>Ereignistyp wählen...*</option>
+				<?php
+				foreach ($this->ereignistypen as $ereignistyp){
+					echo '<option value="'.$ereignistyp->name.'">'.$ereignistyp->name.' ('.$ereignistyp->description.')'. '</option>';
+				}?>
+				
+			</select>			
 			<input type="text" size="10" name="beginn" id="datepicker_begin" placeholder="Beginn*" readonly>			
 			<input type="text" size="10" name="ende" id="datepicker_end" placeholder="Ende*" readonly>
 			<input type="text" name="verantwortlich" placeholder="Verantwortlich"><br><br>
@@ -162,13 +180,37 @@ class Backend_Termin_Edit {
 				}?>
 				
 			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" 
-				   value="<?php echo $termin_object->get_bildungsgang();?>">			
+		    <select name="bildungsgang" >
+				<option value="" disabled selected>Bildungsgang wählen...*</option>
+				<?php
+				foreach ($this->bildungsgaenge as $bildungsgang){
+					if ($bildungsgang->name ==$termin_object->get_bildungsgang()){ 
+						echo '<option value="'.$bildungsgang->name.'" selected>'.$bildungsgang->name.'</option>';
+					}
+					else{
+						echo '<option value="'.$bildungsgang->name.'">'.$bildungsgang->name.'</option>';
+					}
+				}?>
+			</select>						
 			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
-				   value="<?php echo $termin_object->get_bezeichnung();?>">			
-			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" 
-				   value="<?php echo $termin_object->get_ereignistyp();?>">			
+				   value="<?php echo $termin_object->get_bezeichnung();?>">	
+			
+			<select name="ereignistyp" >
+				<option value="" disabled selected>Ereignistyp wählen...*</option>
+				<?php
+				foreach ($this->ereignistypen as $ereignistyp){
+					if ($ereignistyp->name ==$termin_object->get_ereignistyp()){
+						echo '<option value="'.$ereignistyp->name.'" selected>'.$ereignistyp->name.' ('.$ereignistyp->description.')'. '</option>';
+					}
+					else{
+						echo '<option value="'.$ereignistyp->name.'">'.$ereignistyp->name.' ('.$ereignistyp->description.')'. '</option>';
+					}
+						
+						
+					}?>
+				
+			</select>	
+						
 			<input type="text" size="10" name="beginn" id="datepicker_begin" 
 				   placeholder="Beginn*" readonly value="<?php echo $termin_object->get_termin_beginn_as_string();?>">			
 			<input type="text" size="10" name="ende" id="datepicker_end" 
@@ -208,9 +250,20 @@ class Backend_Termin_Edit {
 				}?>
 				
 			</select>
-		<!--	<input type="text" size="10" name="timetable_ID" placeholder="Timetable ID">-->			
-			<input type="text" name="bildungsgang" placeholder="Bildungsgang*" 
-				   value="<?php echo $form_data['bildungsgang'];?>">			
+			<select name="bildungsgang" >
+				<option value="" disabled selected>Bildungsgang wählen...*</option>
+				<?php
+				foreach ($this->bildungsgaenge as $bildungsgang){
+					if ($bildungsgang->name ==$form_data['bildungsgang']){ 
+						echo '<option value="'.$bildungsgang->name.'" selected>'.$bildungsgang->name.'</option>';
+					}
+					else{
+						echo '<option value="'.$bildungsgang->name.'">'.$bildungsgang->name.'</option>';
+					}
+				}?>
+				
+			</select>			
+			
 			<input type="text" name="bezeichnung" placeholder="Bezeichnung*" 
 				   value="<?php echo $form_data['bezeichnung'];?>">			
 			<input type="text" name="ereignistyp" placeholder="Ereignistyp*" 

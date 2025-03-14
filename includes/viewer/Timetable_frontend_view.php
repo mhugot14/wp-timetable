@@ -122,7 +122,7 @@ class Timetable_frontend_view{
 						else{
 							$dauer = $termin->get_dauer();
 							$html .= '<td colspan="'.strval($dauer).'" class="td_'.
-										$termin->get_ereignistyp().'">'.$termin->get_ereignistyp() ;
+										sanitize_title($termin->get_ereignistyp()).'">'.$termin->get_ereignistyp() ;
 							if ($dauer>6 OR $termin->get_ereignistyp()=="Sonstiges"){
 
 								$html .= ' (<i>'.$termin->get_bezeichnung().'</i>)' ;

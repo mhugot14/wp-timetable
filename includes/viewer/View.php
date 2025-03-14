@@ -11,6 +11,7 @@ require_once 'Timetable_frontend_view.php';
 require_once 'Backend_Sidebox.php';
 require_once 'Backend_Termin_Edit.php';
 require_once 'Backend_Timetable_Edit.php';
+require_once 'Backend_Einstellungen.php';
 
 require_once MH_TT_PATH. 'includes/model/Timetable_repository.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
@@ -19,7 +20,7 @@ require_once MH_TT_PATH.'includes/controller/Termin_controller.php';
 class View{
 	
 	private $my_termin_controller, $my_timetable_controller, $my_termine_repository,
-			$my_timetable_repository;
+			$my_timetable_repository,$my_Einstellungen;
 	//Konstruktor
 	public function __construct(){
 		
@@ -28,6 +29,7 @@ class View{
 		$this->my_timetable_controller = new Timetable_controller();
 		$this->my_termine_repository = new Termine_repository();
 		$this->my_timetable_repository = new Timetable_repository();
+		$this->my_Einstellungen = new Backend_Einstellungen();
 		
 		add_action('admin_menu', [$this, 'create_menu']);
 	//	add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
@@ -35,8 +37,6 @@ class View{
 			
 		//add_action('add_meta_boxes', [$this,'register_metaboxes']);
 		//add_filter('meta_box_location', [$this,'my_meta_box_location'], 10, 3);
-		
-		
 		
 		//FRONTEND
 		add_action('init', [$this,'setup_shortcodes']);
@@ -49,8 +49,7 @@ class View{
 		add_action( 'admin_enqueue_scripts',[$this, 'custom_admin_styles'] );
 		
 		add_action( 'admin_post_handle_csv_upload', [$this,'handle_csv_upload_callback'] );
-		
-		
+				
 	}
 	
 	public function setup_shortcodes(){
@@ -104,7 +103,25 @@ class View{
         'Einstellungen',
         [$this, 'render_einstellungen']
     );
-		
+	/*
+	// "Bildungsgänge" als Untermenü von "Einstellungen" hinzufügen
+		 add_submenu_page(
+			'mh-timetable', // Menüpunkt "Einstellungen" als übergeordnete Seite
+			'Bildungsgänge', // Seitentitel
+			'Bildungsgänge', // Name im Menü
+			'manage_options', // Berechtigung
+			'edit-tags.php?taxonomy=bildungsgang' // Link zur Taxonomie-Verwaltung
+    );
+		 
+		 	// "Bildungsgänge" als Untermenü von "Einstellungen" hinzufügen
+		 add_submenu_page(
+			'mh-timetable', // Menüpunkt "Einstellungen" als übergeordnete Seite
+			'Ereignistypen', // Seitentitel
+			'Ereignistypen', // Name im Menü
+			'manage_options', // Berechtigung
+			'edit-tags.php?taxonomy=ereignistyp' // Link zur Taxonomie-Verwaltung
+    );
+	*/	
 
 	}
 	
@@ -210,7 +227,9 @@ class View{
 	}
 	
 	public function render_einstellungen(){
-		echo '<h1>Einstellungen</h1>';
+			
+		$this->my_Einstellungen->generiere_Einstellungsseite();
+		
 	}
 	
 	public function timetable_enqueue_styles() {
@@ -255,6 +274,56 @@ class View{
 		error_log("admin_javascript() wurde aufgerufen");
     echo '<script>console.log("admin_javascript() wurde aufgerufen");</script>';
     }
+	
+	function timetable_register_settings() {
+    // Registrierung der Optionen
+    register_setting('timetable_settings_group', 'timetable_kategorien');
+    register_setting('timetable_settings_group', 'timetable_ereignistypen');
+
+    // Registrierung der Sektionen
+    add_settings_section(
+        'timetable_kategorien_section',   // ID der Sektion
+        'Kategorien',                     // Titel der Sektion
+        null,                             // Callback-Funktion (optional)
+        'timetable_kategorien'            // Slug der Seite
+    );
+
+    add_settings_section(
+        'timetable_ereignistypen_section', // ID der Sektion
+        'Ereignistypen',                   // Titel der Sektion
+        null,                              // Callback-Funktion (optional)
+        'timetable_ereignistypen'          // Slug der Seite
+    );
+
+    // Registrierung der Felder
+    add_settings_field(
+        'timetable_kategorien_field',     // ID des Felds
+        'Kategorien',                     // Titel des Felds
+        [$this,'kategorien_field_callback'],      // Callback-Funktion zur Ausgabe des Felds
+        'timetable_kategorien',           // Slug der Seite, auf der das Feld angezeigt wird
+        'timetable_kategorien_section'    // ID der Sektion, in der das Feld angezeigt wird
+    );
+
+    add_settings_field(
+        'timetable_ereignistypen_field',  // ID des Felds
+        'Ereignistypen',                  // Titel des Felds
+	[$this,'ereignistypen_field_callback'],   // Callback-Funktion zur Ausgabe des Felds
+        'timetable_ereignistypen',        // Slug der Seite, auf der das Feld angezeigt wird
+        'timetable_ereignistypen_section' // ID der Sektion, in der das Feld angezeigt wird
+    );
+}
+
+// Callback-Funktion zur Anzeige des Kategorien-Feldes
+function kategorien_field_callback() {
+    $kategorien = get_option('timetable_kategorien');
+    echo '<textarea name="timetable_kategorien" rows="5" cols="50">'.esc_textarea($kategorien).'</textarea>';
+}
+
+// Callback-Funktion zur Anzeige des Ereignistypen-Feldes
+function ereignistypen_field_callback() {
+    $ereignistypen = get_option('timetable_ereignistypen');
+    echo '<textarea name="timetable_ereignistypen" rows="5" cols="50">'.esc_textarea($ereignistypen).'</textarea>';
+}
 
 }	
 

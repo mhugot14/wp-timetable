@@ -6,11 +6,15 @@ namespace timetable;
  */
 require_once ABSPATH . 'wp-admin/includes/class-wp-list-table.php';
 require_once MH_TT_PATH. 'includes/controller/Termin_controller.php';
+require_once MH_TT_PATH. 'includes/controller/Timetable_controller.php';
+require_once MH_TT_PATH. 'includes/controller/Einstellungen_controller.php';
 
 class Backend_List_Table_Termine extends \WP_List_Table {
 	
 	private $data;
 	private $my_termin_controller;
+	private $my_timetable_controller;
+	private $my_einstellungen_controller;
 	
     public function __construct() {
         parent::__construct([
@@ -21,6 +25,8 @@ class Backend_List_Table_Termine extends \WP_List_Table {
         ]);
 		
 		$this->my_termin_controller=new Termin_controller();
+		$this->my_timetable_controller=new Timetable_controller();
+		$this->my_einstellungen_controller=new Einstellungen_controller();
 
 	}
    
@@ -28,7 +34,17 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 		$this->data = $data;
 	}
 	public function prepare_items(){
-		$this->items = $this->data;
+		
+		$filter_bildungsgang = isset($_GET['filter_bildungsgang']) ? 
+				sanitize_text_field($_GET['filter_bildungsgang']) : '';
+		$filter_ereignistyp = isset($_GET['filter_ereignistyp']) ? 
+				sanitize_text_field($_GET['filter_ereignistyp']) : '';
+		$filter_timetable = isset($_GET['filter_timetable']) ? 
+			sanitize_text_field($_GET['filter_timetable']) : '';
+		
+		$this->items = $this->my_termin_controller->get_filtered_termine(
+				$filter_bildungsgang, $filter_ereignistyp, '3');
+		//$this->items = $this->data;
         $columns = $this->get_columns();
         $hidden = $this->get_hidden_columns();
         $sortable = $this->get_sortable_columns();
@@ -110,12 +126,12 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 }
 	
 	   // Diese Methode fügt eine benutzerdefinierte Aktion für das Hinzufügen eines neuen Datensatzes hinzu
-    public function extra_tablenav($which) {
+  /*  public function extra_tablenav($which) {
         if ($which === 'top') {
             echo '<div class="alignleft actions">';
             echo '</div>';
         }
-	}
+	}*/
 	
 	 public function get_sortable_columns()
     {
@@ -246,5 +262,55 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 				echo '<ul class=form_errors><li>Keine Datensätze ausgewählt</li></ul>';
 			}
 		}
-	}		
+		}
+	//Filterfunktion für die Tabelle
+	public function extra_tablenav($which) {
+    if ($which == "top") {
+        // Hier kannst du den Filter-HTML-Code einfügen
+        $selected_bildungsgang = isset($_GET['filter_bildungsgang']) ? $_GET['filter_bildungsgang'] : '';
+        $selected_ereignistyp = isset($_GET['filter_ereignistyp']) ? $_GET['filter_ereignistyp'] : '';
+		$selected_timetable = isset($_GET['filter_timetable'])? $_GET['filter_timetable']:'';
+		
+		//Alle Timetables holen für das Dropdown
+		$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
+		$ereignistyp_data  = $this->my_einstellungen_controller->get_bildungsgaenge();
+		$bildungsgang_data= $this->my_einstellungen_controller->get_ereignistypen();
+		
+				
+        ?>
+        <div class="alignleft actions">
+			
+			<select name="filter_timetable">
+                <option value="">Alle Timetables</option>
+				<?php
+				foreach ($timetable_data as $timetable){
+					echo '<option value="'.$timetable['id']. selected($selected_timetable,$timetable['id']).'">'
+							.$timetable['id'] .' | '.$timetable['bezeichnung'].'</option>';
+				}
+				?>
+            </select>
+            <select name="filter_bildungsgang">
+                <option value="">Alle Bildungsgänge</option>
+               <?php
+				foreach ($bildungsgang_data as $bildungsgang){
+					echo '<option value="'.$bildungsgang->name. selected($selected_bildungsgang,$bildungsgang->name).'">'
+							.$bildungsgang->name .' | '.$bildungsgang->description.'</option>';
+				}
+				?>
+            </select>
+            <select name="filter_ereignistyp">
+                <option value="">Alle Ereignistypen</option>
+                 <?php
+				foreach ($ereignistyp_data as $ereignistyp){
+					echo '<option value="'.$ereignistyp->name. selected($selected_ereignistyp,$ereignistyp->name).'">'
+							.$ereignistyp->name .' | '.$ereignistyp->description.'</option>';
+				}
+				?>
+            </select>
+            <input type="submit" name="filter_action" id="doaction" class="button action" value="Filtern">
+        </div>
+        <?php
+    }
+}
+	
 }

@@ -27,6 +27,8 @@ require_once __DIR__ . '/includes/Plugin_Helpers.php';
 require_once __DIR__ . '/includes/viewer/View.php';
 //require_once __DIR__ . '/includes/viewer/View2.php';
  
+register_activation_hook(MH_TT_FILE, ['timetable\Backend_Einstellungen', 'on_activate']);
+
 	
 	register_activation_hook(
 		MH_TT_FILE, 
