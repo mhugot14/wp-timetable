@@ -77,6 +77,32 @@ class Termine_repository implements Repository_interface{
 				 ' WHERE timetable_ID = '.$timetable_id. ' order by bildungsgang, beginn;', ARRAY_A); 
 		 return $resultSet;
 	 }
+	 
+	 public function get_filtered_data($timetable_id, $bildungsgang_name, $ereignistyp_name){
+		 // 🟢 Basis-SQL-Abfrage
+		$sql = "SELECT * FROM $this->tabellenname WHERE 1=1";
+
+		// 🟢 Dynamisch Filter hinzufügen
+		$params = [];
+		if (!empty($bildungsgang_name)) {
+			$sql .= " AND bildungsgang = %s";
+			$params[] = $bildungsgang_name;
+		}
+		if (!empty($ereignistyp_name)) {
+			$sql .= " AND ereignistyp = %s";
+			$params[] = $ereignistyp_name;
+		}
+		if (!empty($timetable_id)) {
+			$sql .= " AND timetable_ID = %d";
+			$params[] = $timetable_id;
+		}
+		   
+		if (empty($params)) {
+			return $this->wpdb->get_results($sql, ARRAY_A);
+    }
+		$resultSet=	$this->wpdb->get_results($this->wpdb->prepare($sql, ...$params), ARRAY_A);
+			 return $resultSet; 
+	 }
 
 	 public function update( $id, $termin ) {
 		 

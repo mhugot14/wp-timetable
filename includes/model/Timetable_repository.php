@@ -52,7 +52,7 @@ class Timetable_repository implements Repository_interface{
 
 
 	 public function get_data() {
-		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.';', ARRAY_A); 
+		 $resultSet = $this->wpdb->get_results('SELECT * FROM '.$this->tabellenname.' ORDER by id DESC;' , ARRAY_A); 
 		 return $resultSet;
 	 }
 	 
