@@ -10,6 +10,7 @@ namespace timetable;
 require_once 'Timetable_repository.php';
 require_once 'Termine_repository.php';
 require_once 'Termin.php';
+require_once 'Ferien_repository.php';
 require_once MH_TT_PATH. '/includes/Plugin_Helpers.php';
 
 use DateTime;
@@ -32,6 +33,7 @@ class Timetable {
 	private $timetable_objects;
 	private $my_timetable_repository;
 	private $my_Termine_repository;
+	private $my_Ferien_repository;
 	/**Konstruktor mit optionaler ID. Wenn eine ID gesetzt ist, wird ein 
 	 * bestehendes Objekt aus der DB geladen und instanziiert. Wird die ID
 	 * nicht mit angegeben, ist es in der Regel ein Objekt, welches neu angelegt wird.
@@ -73,6 +75,7 @@ class Timetable {
 					$this->laenge=$this->get_laenge_in_tagen();
 				}
 			}
+		$this->my_Ferien_repository = new Ferien_repository;
 	}
 	
 	 //Liefert frühstes Datum aller Termine der Timetable zurück
@@ -222,6 +225,24 @@ class Timetable {
 
     return $ical_termin;
 	}
+	
+	public function get_ferien_und_feiertage(): array {
+    $ferien_und_feiertage = [];
+
+    // 🟢 Ferien aus der Datenbank abrufen
+	$ferien = $this->my_Ferien_repository->get_data();
+    foreach ($ferien as $eintrag) {
+        $start = new DateTime($eintrag['startdatum']);
+        $end = new DateTime($eintrag['enddatum']);
+
+        while ($start <= $end) {
+            $ferien_und_feiertage[$start->format('d.m.')] = $eintrag['name'];
+            $start->modify('+1 day');
+        }
+    }
+
+    return $ferien_und_feiertage;
+}
 	
 	public function get_timetable_objects() {
 		return $this->timetable_objects;

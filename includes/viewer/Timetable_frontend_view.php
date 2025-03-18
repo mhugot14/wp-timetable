@@ -57,6 +57,9 @@ class Timetable_frontend_view{
 		$html .= '}';
 		$html .= '};';
 		$html .= '</script>';
+		 // 🟢 Feiertage & Ferien abrufen
+    $ferien_und_feiertage = $this->my_timetable->get_ferien_und_feiertage();
+		
 
         if ($this->my_timetable->check_anzahl_termine()==true){
 			$html .='<div class="timetable-container">'.'<table class="timetablegrid">'
@@ -68,6 +71,10 @@ class Timetable_frontend_view{
 				$css_klasse = "timetable_date";
 				if (($wochentag=='Sa' OR $wochentag=='So') AND $this_date!=$today){
 					$css_klasse.='_weekend';
+				}
+				   // 🟢 Feiertage & Ferien hervorheben
+				elseif (isset($ferien_und_feiertage[$this_date])) {
+					$css_klasse .= '_holiday';
 				}
 				if ($this_date==$today){
 					$css_klasse.='_today';
@@ -110,6 +117,9 @@ class Timetable_frontend_view{
 							if($date_day_month ==$today){
 								$html.='<td class="today"></td>';
 							}
+						   elseif (isset($ferien_und_feiertage[$date_day_month])) {
+								$html.='<td class="holiday"></td>';
+						   }
 							elseif($wochentag=='Sa'OR $wochentag=='So'){
 								$html.='<td class="weekend"></td>';
 							}

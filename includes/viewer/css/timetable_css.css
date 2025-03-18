@@ -31,6 +31,16 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
         background-color:#6B818C;
         
 }
+.timetable_date_holiday {
+    writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#FFF8DC  !important;
+    color:black;  
+}
 .timetable_date_weekend{
    writing-mode: vertical-rl; /* Schräger Text */
     transform: rotate(180deg); /* 180 Grad drehen */
@@ -95,6 +105,9 @@ Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this t
 
 .timetablegrid td.today{
     background-color: #ff9999;
+}
+.timetablegrid td.holiday{
+    background-color: #FFF8DC;
 }
 /* JETZT DYNAMISCH
 .td_ZK{
