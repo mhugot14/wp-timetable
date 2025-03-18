@@ -11,7 +11,7 @@
 Plugin Name: Timetable Schulverwaltung
 Plugin URI: www.lebk-muenster.de
 Description: Das Plugin generiert eine Zeittafel. Diese wird benutzt um z.B. den Zeugnisschreibungsprozess übersichtlich darzustellen.
-Version: 0.4.3
+Version: 0.5.0
 Author: Michael Hugot
 Author URI: Berufsschulwissen.de
 License: GPLv2
