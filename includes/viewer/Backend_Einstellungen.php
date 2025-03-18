@@ -7,14 +7,17 @@ namespace timetable;
  */
 
 require_once MH_TT_PATH.'includes/controller/Einstellungen_controller.php';
+require_once MH_TT_PATH.'includes/controller/Ferien_controller.php';
+require_once MH_TT_PATH.'includes/viewer/Backend_List_Table_Ferien.php';
 
 
 class Backend_Einstellungen {
     
-    private $my_einstellungen_controller;
+    private $my_einstellungen_controller, $my_ferien_controller ;
     
     public function __construct() {
         $this->my_einstellungen_controller = new Einstellungen_controller();
+		$this->my_ferien_controller = new Ferien_controller();
 		add_action('init', [$this,'wp_timetable_register_taxonomy_bildungsgang']);
 		add_action('init', [$this,'wp_timetable_register_taxonomy_ereignistyp']);
 		//add_action('init',[$this,'wp_timetable_add_default_ereignistypen']);
@@ -23,8 +26,9 @@ class Backend_Einstellungen {
         add_action('edited_ereignistyp', [$this,'wp_timetable_save_ereignistypen_color_field']);
 		add_action('created_ereignistyp', [$this,'wp_timetable_save_ereignistypen_color_field']);
 		add_action('wp_head', [$this,'wp_timetable_generate_dynamic_css']);
-		
-		
+		add_action('admin_init', [$this, 'handle_ferien_form']);
+		add_action('admin_init', [$this, 'handle_ferien_delete']);
+		add_action('admin_init', [$this, 'handle_ferien_import']);
 		
     }
 
@@ -164,10 +168,22 @@ class Backend_Einstellungen {
 }
 
 	public function generiere_Einstellungsseite(){
-		   echo '<h1>Einstellungen</h1>';
-    echo '<ul><li><a href="edit-tags.php?taxonomy=bildungsgang">Bildungsgänge verwalten</a></li>';
-	echo '<li><a href="edit-tags.php?taxonomy=ereignistyp">Ereignistypen verwalten</a></li>';
-	echo '</ul>';
+		 echo '<h1>Einstellungen</h1>';
+		echo '<ul><li><a href="edit-tags.php?taxonomy=bildungsgang">Bildungsgänge verwalten</a></li>';
+		echo '<li><a href="edit-tags.php?taxonomy=ereignistyp">Ereignistypen verwalten</a></li>';
+		echo '</ul>';
+		
+		echo '<h2>Ferien</h2>';
+		
+		$this->render_ferien_form();
+		 // Ferien-Tabelle
+	    $ferien_table = new Backend_List_Table_Ferien();
+		 $ferien_table->prepare_items();
+		echo '<form method="post">';
+		 $ferien_table->display();
+		echo '</form>';
+		$this->render_ferien_import_form();
+	
 	}
 	function timetable_custom_admin_css() {
     echo '<style>
@@ -184,4 +200,171 @@ class Backend_Einstellungen {
 		$settings->wp_timetable_add_default_ereignistypen(); // Standard-Ereignistypen hinzufügen
 	}
 	
+	private function render_ferien_form() {
+		?>
+		<h3>Neue Ferien hinzufügen</h3>
+		<form method="post">
+			<label for="ferien_name">Name:</label>
+			<input type="text" name="ferien_name" required>
+
+			<label for="startdatum">Startdatum:</label>
+			<input type="date" name="startdatum" required>
+
+			<label for="enddatum">Enddatum:</label>
+			<input type="date" name="enddatum" required>
+
+			<label for="typ">Typ:</label>
+			<select name="typ" required>
+				<option value="ferien" <?php selected($_POST['typ'] ?? '', 'ferien'); ?>>Ferien</option>
+				<option value="feiertag" <?php selected($_POST['typ'] ?? '', 'feiertag'); ?>>Feiertag</option>
+			</select>
+
+			<input type="hidden" name="action" value="save_ferien">
+			<?php wp_nonce_field('save_ferien_action', 'save_ferien_nonce'); ?>
+
+			<button type="submit" class="button button-primary">Speichern</button>
+		</form>
+		<hr>
+		<?php
+	}
+
+	public function handle_ferien_form() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'save_ferien') {
+			if (!isset($_POST['save_ferien_nonce']) || !wp_verify_nonce($_POST['save_ferien_nonce'], 'save_ferien_action')) {
+				die('Sicherheitsüberprüfung fehlgeschlagen.');
+			}
+				$ferieneintrag = [
+			'name'       => sanitize_text_field($_POST['ferien_name']),
+			'startdatum' => sanitize_text_field($_POST['startdatum']),
+			'enddatum'   => sanitize_text_field($_POST['enddatum']),
+			'typ'        => sanitize_text_field($_POST['typ'])
+		];
+
+			$this->my_ferien_controller->add_object($ferieneintrag);
+			
+
+			wp_redirect(admin_url('admin.php?page=Einstellungen'));
+			exit;
+		}
+	}
+	
+	public function handle_ferien_delete() {
+    if (isset($_GET['action']) && $_GET['action'] === 'delete_ferien' && isset($_GET['id'])) {
+        // Sicherheitsprüfung mit Nonce
+        if (!isset($_GET['_wpnonce']) || !wp_verify_nonce($_GET['_wpnonce'], 'delete_ferien_' . $_GET['id'])) {
+            wp_die(__('Sicherheitsprüfung fehlgeschlagen.', 'timetables'));
+        }
+
+        $id = intval($_GET['id']);
+        $this->my_ferien_controller->delete_object($id);
+
+        // Nach dem Löschen zurückleiten
+        wp_redirect(admin_url('admin.php?page=Einstellungen'));
+        exit;
+    }
+	}	
+	private function render_ferien_import_form() {
+		$years = range(date('Y'), date('Y') + 5); // Aktuelles Jahr + 5 Jahre
+		$bundeslaender = [
+			"NW" => "Nordrhein-Westfalen",
+			"BW" => "Baden-Württemberg",
+			"BY" => "Bayern",
+			"BE" => "Berlin",
+			"BB" => "Brandenburg",
+			"HB" => "Bremen",
+			"HH" => "Hamburg",
+			"HE" => "Hessen",
+			"MV" => "Mecklenburg-Vorpommern",
+			"NI" => "Niedersachsen",
+			"RP" => "Rheinland-Pfalz",
+			"SL" => "Saarland",
+			"SN" => "Sachsen",
+			"ST" => "Sachsen-Anhalt",
+			"SH" => "Schleswig-Holstein",
+			"TH" => "Thüringen"
+		];
+		?>
+		<h3>Ferien per API abrufen</h3>
+		<form method="post">
+			<label for="jahr">Jahr:</label>
+			<select name="jahr">
+				<?php foreach ($years as $year): ?>
+					<option value="<?php echo esc_attr($year); ?>"><?php echo esc_html($year); ?></option>
+				<?php endforeach; ?>
+			</select>
+
+			<label for="bundesland">Bundesland:</label>
+			<select name="bundesland">
+				<?php foreach ($bundeslaender as $code => $name): ?>
+					<option value="<?php echo esc_attr($code); ?>"><?php echo esc_html($name); ?></option>
+				<?php endforeach; ?>
+			</select>
+
+			<input type="hidden" name="action" value="fetch_ferien">
+			<?php wp_nonce_field('fetch_ferien_action', 'fetch_ferien_nonce'); ?>
+
+			<button type="submit" class="button button-primary">Ferien abrufen</button>
+		</form>
+		<hr>
+		<?php
+	}
+	
+	public function handle_ferien_import() {
+		if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'fetch_ferien') {
+			if (!isset($_POST['fetch_ferien_nonce']) || !wp_verify_nonce($_POST['fetch_ferien_nonce'], 'fetch_ferien_action')) {
+				wp_die(__('Sicherheitsüberprüfung fehlgeschlagen.', 'timetables'));
+			}
+
+			$jahr = intval($_POST['jahr']);
+			$bundesland = sanitize_text_field($_POST['bundesland']);
+
+			// 🟢 Ferien API abrufen
+			$ferien_api_url = "https://ferien-api.de/api/v1/holidays/{$bundesland}/{$jahr}";
+			$ferien_response = wp_remote_get($ferien_api_url);
+			$ferien_daten = json_decode(wp_remote_retrieve_body($ferien_response), true);
+
+			// 🟢 Feiertage API abrufen
+			$feiertage_api_url = "https://feiertage-api.de/api/?jahr={$jahr}&nur_land={$bundesland}";
+			$feiertage_response = wp_remote_get($feiertage_api_url);
+			$feiertage_daten = json_decode(wp_remote_retrieve_body($feiertage_response), true);
+
+			// ❌ Fehlerbehandlung, falls keine Daten geladen werden konnten
+			if (empty($ferien_daten) && empty($feiertage_daten)) {
+				echo '<div class="error"><p>Keine Daten für das gewählte Jahr/Bundesland gefunden.</p></div>';
+				return;
+			}
+
+			// 🔹 Ferien speichern
+			if (!empty($ferien_daten)) {
+				foreach ($ferien_daten as $ferien) {
+					$ferieneintrag = [
+						'name'       => sanitize_text_field($ferien['name']),
+						'startdatum' => sanitize_text_field($ferien['start']),
+						'enddatum'   => sanitize_text_field($ferien['end']),
+						'typ'        => 'Ferien'
+					];
+					$this->my_ferien_controller->add_object($ferieneintrag);
+				}
+			}
+
+			// 🔹 Feiertage speichern
+			if (!empty($feiertage_daten)) {
+				foreach ($feiertage_daten as $feiertag_name => $feiertag) {
+					$feiertagseintrag = [
+						'name'       => sanitize_text_field($feiertag_name), // Name des Feiertags (z. B. "Ostermontag")
+						'startdatum' => sanitize_text_field($feiertag['datum']), // Datum des Feiertags
+						'enddatum'   => sanitize_text_field($feiertag['datum']), // Ist gleich Startdatum
+						'typ'        => 'Feiertag'
+					];
+					$this->my_ferien_controller->add_object($feiertagseintrag);
+				}
+			}
+
+			echo '<div class="updated"><p>Ferien & Feiertage wurden erfolgreich gespeichert.</p></div>';
+		}
+	}
+
 }
+
+	
+

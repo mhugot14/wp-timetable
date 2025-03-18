@@ -10,13 +10,14 @@ class Plugin_Helpers{
 		/*Hier passiert das, was passiert, wenn das Plugin aktiviert wird
 		  */
 		 global $mh_tt_db_version;
-        $mh_tt_db_version = '1.11';  // Setze die neue Datenbank-Version
+        $mh_tt_db_version = '1.12';  // Setze die neue Datenbank-Version
 
         // Überprüfen, ob ein Datenbank-Update notwendig ist
         if (get_site_option('mh_tt_db_version') != $mh_tt_db_version) {
-            self::update_db_schema();
+            error_log("🚀 DB-Schema von tt_timetable wird aktualisiert");
+			self::update_db_schema();
         }
-		 error_log("🚀 activate() wurde aufgerufen!");
+		 
 		
 		//self::wp_timetable_register_taxonomy_ereignistyp();
 		//self::wp_timetable_add_default_ereignistypen();
@@ -88,6 +89,9 @@ class Plugin_Helpers{
 		//tabellennamen
 		$tt_termine = $wpdb->prefix.'tt_termine';
 		$tt_timetable = $wpdb->prefix.'tt_timetable';
+		$tt_ferien = $wpdb->prefix . 'tt_ferien'; // Tabelle für Ferienzeiten & Feiertage
+
+		
 		$sql_tt_termine = "CREATE TABLE `$tt_termine` (
     `id` int(20) NOT NULL AUTO_INCREMENT,
     `bildungsgang` varchar(30) NOT NULL,
@@ -115,16 +119,27 @@ class Plugin_Helpers{
 				(5, 'Sommer 2025', 'Organisation der Zeugnisschreibung im Sommer 2025', '2024-02-26');";
 		*/
 	
+		// Tabelle für Ferien & Feiertage
+    $sql_tt_ferien = "CREATE TABLE `$tt_ferien` (
+        `id` int(11) NOT NULL AUTO_INCREMENT,
+        `name` varchar(100) NOT NULL,
+        `startdatum` date NOT NULL,
+        `enddatum` date NOT NULL,
+        `typ` ENUM('ferien', 'feiertag') NOT NULL,  -- Unterscheidung Ferien / Feiertag
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB $charset_collate;";
+
 		
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		error_log("dbDelta fuer Termine: $sql_tt_termine");
-		
 			dbDelta($sql_tt_termine);
 		error_log("dbDelta fuer Timetable: $sql_tt_timetable");
 			dbDelta($sql_tt_timetable);
+		error_log("dbDelta fuer Timetable: $sql_tt_ferien");
+			 dbDelta($sql_tt_ferien);
 			//dbDelta($sql_tt_timetable_data);	
 		//Die DB-Version wird auf die neuste Version gesetzt.	
-		update_option('mh_tt_db_version', '1.11');
+		update_option('mh_tt_db_version', '1.12');
 	}
 	
 
