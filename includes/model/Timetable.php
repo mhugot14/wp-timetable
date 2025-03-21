@@ -236,7 +236,7 @@ class Timetable {
         $end = new DateTime($eintrag['enddatum']);
 
         while ($start <= $end) {
-            $ferien_und_feiertage[$start->format('d.m.')] = $eintrag['name'];
+            $ferien_und_feiertage[$start->format('d.m.y')] = $eintrag['name'];
             $start->modify('+1 day');
         }
     }

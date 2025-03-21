@@ -1,0 +1,84 @@
+/*
+Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+Click nbfs://nbhost/SystemFileSystem/Templates/ClientSide/css.css to edit this template
+*/
+/* 
+    Created on : 19.03.2025, 16:26:24
+    Author     : micha
+*/
+/* =========================== */
+/*  📄 TIMETABLE DRUCK-CSS     */
+/* =========================== */
+
+/* ============ DRUCK-CSS FÜR TIMETABLE ============ */
+
+@page {
+    size: A4 landscape;
+    margin: 10mm;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    font-size: 9px;
+    color: black;
+    background: white;
+    margin: 0;
+    padding: 0;
+}
+
+/* Keine Buttons etc. drucken */
+.no-print,
+button,
+a[href*="ical"],
+a.button {
+    display: none !important;
+}
+
+.timetable-container {
+    overflow-x: auto;
+    width: 100%;
+    max-height: 95vh;
+    border: 1px solid #ccc;
+}
+
+.timetablegrid {
+    min-width: 1600px; /* oder dynamisch per JS */
+    table-layout: auto;
+    font-size: 11px;
+}
+
+.timetablegrid th,
+.timetablegrid td {
+    border: 1px solid #000;
+    padding: 2px;
+    text-align: center;
+    word-wrap: break-word;
+}
+
+/* Vertikale Header */
+.timetablegrid th {
+    writing-mode: vertical-rl;
+    transform: rotate(180deg);
+    background-color: #ddd;
+}
+
+/* Sticky ausschalten */
+.sticky_column {
+    position: static !important;
+    background: #f5f5f5;
+    font-weight: bold;
+}
+
+/* Farben */
+.timetablegrid td.weekend {
+    background-color: #eee;
+}
+.timetablegrid td.holiday {
+    background-color: #fff5c3;
+}
+.timetablegrid td.today {
+    background-color: #fdd;
+}
+.td_ende {
+    background-color: #ccc;
+}

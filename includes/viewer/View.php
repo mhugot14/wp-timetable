@@ -17,10 +17,11 @@ require_once MH_TT_PATH. 'includes/model/Timetable_repository.php';
 require_once MH_TT_PATH.'includes/model/Termine_repository.php';
 require_once MH_TT_PATH.'includes/controller/Termin_controller.php';
 
+
 class View{
 	
 	private $my_termin_controller, $my_timetable_controller, $my_termine_repository,
-			$my_timetable_repository,$my_Einstellungen;
+			$my_timetable_repository,$my_Einstellungen, $view;
 	//Konstruktor
 	public function __construct(){
 		
@@ -34,7 +35,9 @@ class View{
 		add_action('admin_menu', [$this, 'create_menu']);
 	//	add_action('admin_enqueue_scripts', [$this,'timetable_enqueue_datepicker']);
 		add_action('admin_enqueue_scripts', [$this, 'admin_javascript']);
-			
+		
+		add_action('wp_ajax_print_timetable', [$this,'print_timetable_callback']);
+		add_action('wp_ajax_nopriv_print_timetable',[$this, 'print_timetable_callback']);
 		//add_action('add_meta_boxes', [$this,'register_metaboxes']);
 		//add_filter('meta_box_location', [$this,'my_meta_box_location'], 10, 3);
 		
@@ -313,17 +316,46 @@ class View{
     );
 }
 
-// Callback-Funktion zur Anzeige des Kategorien-Feldes
-function kategorien_field_callback() {
-    $kategorien = get_option('timetable_kategorien');
-    echo '<textarea name="timetable_kategorien" rows="5" cols="50">'.esc_textarea($kategorien).'</textarea>';
-}
+	// Callback-Funktion zur Anzeige des Kategorien-Feldes
+	function kategorien_field_callback() {
+		$kategorien = get_option('timetable_kategorien');
+		echo '<textarea name="timetable_kategorien" rows="5" cols="50">'.esc_textarea($kategorien).'</textarea>';
+	}
 
-// Callback-Funktion zur Anzeige des Ereignistypen-Feldes
-function ereignistypen_field_callback() {
-    $ereignistypen = get_option('timetable_ereignistypen');
-    echo '<textarea name="timetable_ereignistypen" rows="5" cols="50">'.esc_textarea($ereignistypen).'</textarea>';
-}
+	// Callback-Funktion zur Anzeige des Ereignistypen-Feldes
+	function ereignistypen_field_callback() {
+		$ereignistypen = get_option('timetable_ereignistypen');
+		echo '<textarea name="timetable_ereignistypen" rows="5" cols="50">'.esc_textarea($ereignistypen).'</textarea>';
+	}
+	
+	function print_timetable_callback() {
+		if (!isset($_GET['id']) || empty($_GET['id'])) {
+			wp_die('Fehlende Timetable-ID.');
+		}
+
+		$id = intval($_GET['id']);
+		$view = new Timetable_frontend_view(['id' => $id, 'entwurf' => 'nein']);
+		$output = $view->print_grid();
+
+		// 🟢 HTML-Struktur für die Druckansicht
+		echo '<html>
+	    <head>
+		    <title>Druckansicht Timetable</title>
+			<link rel="stylesheet" type="text/css" href="' . plugin_dir_url(__FILE__) . 'css/timetable_print.css">
+		</head>
+		<body>';
+
+
+	//	echo '<h2>' . esc_html($view->my_timetable->get_bezeichnung()) . '</h2>';
+		echo $output;
+
+		echo '<button onclick="window.print()" class="no-print">Jetzt drucken 🖨️</button>';
+		echo '<button onclick="window.close()" class="no-print">Fenster schließen ✖</button>';
+
+		echo '</body></html>';
+
+		exit;
+	}
 
 }	
 

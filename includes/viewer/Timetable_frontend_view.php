@@ -31,17 +31,30 @@ class Timetable_frontend_view{
 		
 //		$grid=$this->print_bildungsgaenge_objects();
 		$grid=$this->generiere_gantt($this->my_timetable->get_timetable_objects());
+		
 		return $grid;
 	}
 	
 	public function generiere_gantt(): string {
-		$today = (new DateTime())->format( 'd.m.');
+		$today = (new DateTime())->format( 'd.m.y');
 		$entwurf_text="";
 		if ($this->entwurf=='ja'){
 			$entwurf_text=' <span style="color:red;"> | ENTWURF - noch nicht eintragen</span>';
 		}
 		$html = '<h2>'.$this->my_timetable->get_bezeichnung().$entwurf_text.'</h2>'
 				.'<p><b>'.$this->my_timetable->get_beschreibung().'</b></p>';
+		
+		// 🟢 Druck-Button einfügen
+$html .= '<button onclick="openPrintView'.$this->id.'()" class="button">🖨️ Drucken</button>';
+
+// 🟢 JavaScript-Funktion für das Popup
+	$html .= '<script>
+    function openPrintView'.$this->id.'() {
+        let printWindow = window.open("' . esc_url_raw(admin_url("admin-ajax.php?action=print_timetable&id=" . $this->id)) . '", "PrintWindow", "width=900,height=600");
+        printWindow.focus();
+    }
+	</script>';
+
 		
 		//Test Javascript, um den aktuellen Tag vorne anzuzeigen
 		// JavaScript zum automatischen Scrollen
@@ -67,7 +80,7 @@ class Timetable_frontend_view{
 			$dates = $this->my_timetable->get_dates();
 			foreach ($dates as $date) {
 				$wochentag = $this->get_wochentag($date);
-				$this_date = $date->format('d.m.');
+				$this_date = $date->format('d.m.y');
 				$css_klasse = "timetable_date";
 				if (($wochentag=='Sa' OR $wochentag=='So') AND $this_date!=$today){
 					$css_klasse.='_weekend';
@@ -109,7 +122,7 @@ class Timetable_frontend_view{
 				}	
 					while ($zaehler<count($dates)){
 						$date = $dates[$zaehler];
-						$date_day_month= (clone $date)->format( 'd.m.');
+						$date_day_month= (clone $date)->format( 'd.m.y');
 
 								$wochentag=$this->get_wochentag($date);
 						if ($date!=$termin->get_termin_beginn()){
