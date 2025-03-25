@@ -22,8 +22,8 @@ class Timetable_controller implements Controller_interface{
 	
 	 function __construct(){
 		 $this->my_timetable_repository = new Timetable_repository();
-	 
-	 }
+		 
+	} 
 	 public function add_object($data) {
 		$my_timetable = new Timetable();
 		$my_timetable->set_bezeichnung( $data['bezeichnung']);
@@ -115,5 +115,4 @@ class Timetable_controller implements Controller_interface{
 
 		return $errors;
 	}
-	
 }
