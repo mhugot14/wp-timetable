@@ -181,17 +181,8 @@ class Timetable {
 	}
 	//Funktion generiert eine iCal-Datei für einen bestimmten Bildungsgang
 	public function generate_ical($bildungsgang){
-		 // iCal-Inhalt erstellen
-			$ical_content = "BEGIN:VCALENDAR\n";
-			$ical_content .= "VERSION:2.0\n";
-			// Termine zum iCal-Inhalt hinzufügen
-		foreach ($this->timetable_objects as $termin) {
-			if ($termin->get_bildungsgang()==$bildungsgang){
-				$ical_content .= $this->generate_ical_termin($termin);
-			}
-		}
-			$ical_content .= "END:VCALENDAR\n";
-
+	
+		$ical_content=$this->generate_ical_feed($bildungsgang);
 		// Pfad zum Speichern der iCal-Datei
 			$file_name= sanitize_file_name($this->get_bezeichnung().'_'.$bildungsgang.'.ics');
 			$file_dir = Plugin_Helpers::create_upload_folder( 'timetable/icals/');
@@ -204,6 +195,23 @@ class Timetable {
 
     // Rückgabewert: Downloadpfad zur gespeicherten iCal-Datei
     return $download_file_path;
+	}
+	
+	public function generate_ical_feed(?string $bildungsgang = null): string {
+		$ical = "BEGIN:VCALENDAR\r\n";
+		$ical .= "VERSION:2.0\r\n";
+		$ical .= "PRODID:-//WP Timetable Plugin//DE\r\n";
+		$ical .= "CALSCALE:GREGORIAN\r\n";
+		$ical .= "METHOD:PUBLISH\r\n";
+
+		foreach ($this->timetable_objects as $termin) {
+			if ($bildungsgang === null || $termin->get_bildungsgang() === $bildungsgang) {
+				$ical .= $this->generate_ical_termin($termin);
+			}
+		}
+
+		$ical .= "END:VCALENDAR\r\n";
+		return $ical;
 	}
 	
 	private function generate_ical_termin($termin){
