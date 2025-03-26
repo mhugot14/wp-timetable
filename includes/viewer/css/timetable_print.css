@@ -82,3 +82,130 @@ a.button {
 .td_ende {
     background-color: #ccc;
 }
+
+
+.timetable-container{
+     overflow-x: auto;
+     width: 95%;
+}
+.timetablegrid{
+    border: green 1px solid;
+    border-collapse: collapse;
+    width: 80%;
+    margin:10px;
+}
+
+.timetablegrid_thead{
+    background-color: #6B818C;
+    color: #DDDDDD;
+    font-size: 0.7em;
+    border: #35605A 1px solid !important; 
+}
+
+.timetablegrid_th{
+        padding:5px;
+        font-weight:normal;
+        background-color:#6B818C;
+        
+}
+.timetable_date_holiday {
+    writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#FFF8DC  !important;
+    color:black;  
+}
+.timetable_date_weekend{
+   writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#E6E9EB  !important;
+    color:black;       
+}
+.timetable_date_weekend_today{
+   writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#ff9999  !important;
+    color:black;       
+}
+
+.timetable_date_today{
+   writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #6B818C 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#ff9999  !important;
+    color:black;       
+}
+.sticky_column{
+     position: sticky;
+    left: 0;
+    z-index: 1;
+    background-color:#f6f2ec;
+    color:black;
+    padding:5px;
+    font-weight:normal;
+    min-width: 90px;
+}
+
+.timetable_date{
+    writing-mode: vertical-rl; /* Schräger Text */
+    transform: rotate(180deg); /* 180 Grad drehen */
+    /*white-space: nowrap;*/ /* Verhindert Zeilenumbruch */
+    border: #35605A 1px solid !important; 
+    font-weight: normal !important;
+    padding:5px !important;
+    background-color:#6B818C !important;
+        
+}
+.timetablegrid td{
+     border: #35605A 1px solid;
+     font-size: 0.7em;
+     padding:5px;
+
+}
+.timetablegrid td.weekend{
+    background-color: #E6E9EB;
+}
+
+.timetablegrid td.today{
+    background-color: #ff9999;
+}
+.timetablegrid td.holiday{
+    background-color: #FFF8DC;
+}
+
+.td_ZK{
+    background-color: #704E2E;
+    color: white;
+}
+
+.td_ZA{
+     background-color: #2E4756;
+     color: white;
+}
+.td_APA{
+    background-color: #B98DA0;
+}
+.td_NE{
+    background-color: #7BB7AF;
+}
+.td_Sonstiges{
+    background-color:#D5C3C9;
+}
+
+.td_ende{
+    background-color: #DBC2CF;
+}

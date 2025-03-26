@@ -45,7 +45,7 @@ class Timetable_frontend_view{
 				.'<p><b>'.$this->my_timetable->get_beschreibung().'</b></p>';
 		
 		// 🟢 Druck-Button einfügen
-$html .= '<button onclick="openPrintView'.$this->id.'()" class="button">🖨️ Drucken</button>';
+$html .= '<button onclick="openPrintView'.$this->id.'()" class="button">️Im neuen Fenster öffnen</button>';
 
 // 🟢 JavaScript-Funktion für das Popup
 	$html .= '<script>

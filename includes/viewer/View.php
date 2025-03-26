@@ -51,7 +51,7 @@ class View{
 		add_action('wp_enqueue_scripts', [$this,'timetable_enqueue_styles']);
 		add_action( 'admin_enqueue_scripts',[$this, 'custom_admin_styles'] );
 		
-		add_action( 'admin_post_handle_csv_upload', [$this,'handle_csv_upload_callback'] );
+		add_action( 'admin_post_handle_csv_upload', [$this,'handle_csv_upload_callback'] );		
 				
 	}
 	
@@ -356,6 +356,6 @@ class View{
 
 		exit;
 	}
-
+	
 }	
 
