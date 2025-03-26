@@ -33,25 +33,52 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 	public function set_data($data){
 		$this->data = $data;
 	}
-	public function prepare_items(){
-		
-		$filter_bildungsgang = isset($_POST['filter_bildungsgang']) ? 
-				sanitize_text_field($_POST['filter_bildungsgang']) : '';
-		$filter_ereignistyp = isset($_POST['filter_ereignistyp']) ? 
-				sanitize_text_field($_POST['filter_ereignistyp']) : '';
-		$filter_timetable = isset($_POST['filter_timetable']) ? 
-			sanitize_text_field($_POST['filter_timetable']) : '';
-		
+	public function prepare_items() {
+		$user_id = get_current_user_id();
+
+		// 🟢 ZUERST prüfen, ob zurückgesetzt werden soll
+		if (!empty($_POST['reset_filter'])) {
+			delete_user_meta($user_id, 'filter_bildungsgang');
+			delete_user_meta($user_id, 'filter_ereignistyp');
+			delete_user_meta($user_id, 'filter_timetable');
+
+			// Zurücksetzen in lokalen Variablen sicherstellen
+			$filter_bildungsgang = '';
+			$filter_ereignistyp  = '';
+			$filter_timetable    = '';
+		}
+
+		// 📥 Wenn POST-Filter gesetzt sind, speichern
+		elseif (!empty($_POST['filter_action'])) {
+			$filter_bildungsgang = sanitize_text_field($_POST['filter_bildungsgang'] ?? '');
+			$filter_ereignistyp  = sanitize_text_field($_POST['filter_ereignistyp'] ?? '');
+			$filter_timetable    = sanitize_text_field($_POST['filter_timetable'] ?? '');
+
+			update_user_meta($user_id, 'filter_bildungsgang', $filter_bildungsgang);
+			update_user_meta($user_id, 'filter_ereignistyp', $filter_ereignistyp);
+			update_user_meta($user_id, 'filter_timetable', $filter_timetable);
+		}
+
+		// 🔄 Andernfalls: aus User-Meta lesen
+		else {
+			$filter_bildungsgang = get_user_meta($user_id, 'filter_bildungsgang', true) ?: '';
+			$filter_ereignistyp  = get_user_meta($user_id, 'filter_ereignistyp', true) ?: '';
+			$filter_timetable    = get_user_meta($user_id, 'filter_timetable', true) ?: '';
+		}
+
+		// 📦 Daten laden
 		$this->items = $this->my_termin_controller->get_filtered_termine(
-				$filter_timetable, $filter_bildungsgang, $filter_ereignistyp);
-		//$this->items = $this->data;
-        $columns = $this->get_columns();
-        $hidden = $this->get_hidden_columns();
-        $sortable = $this->get_sortable_columns();
+			$filter_timetable, $filter_bildungsgang, $filter_ereignistyp
+		);
+
+		// Spalten etc.
+		$columns = $this->get_columns();
+		$hidden = $this->get_hidden_columns();
+		$sortable = $this->get_sortable_columns();
 		$this->_column_headers = array($columns, $hidden, $sortable);
-		usort( $this->items, array( &$this, 'sort_data' ) );
-		
-	}	
+
+		usort($this->items, array(&$this, 'sort_data'));
+	}
 	
 	public function get_columns(){
 		$columns = array(
@@ -263,63 +290,74 @@ class Backend_List_Table_Termine extends \WP_List_Table {
 			}
 		}
 		}
-	//Filterfunktion für die Tabelle
-	public function extra_tablenav($which) {
-    if ($which == "top") {
-        // Hier kannst du den Filter-HTML-Code einfügen
-        $selected_bildungsgang = isset($_POST['filter_bildungsgang']) ? $_POST['filter_bildungsgang'] : '';
-        $selected_ereignistyp = isset($_POST['filter_ereignistyp']) ? $_POST['filter_ereignistyp'] : '';
-		$selected_timetable = isset($_POST['filter_timetable'])? $_POST['filter_timetable']:'';
-		
-		//Alle Timetables holen für das Dropdown
-		$timetable_data = $this->my_timetable_controller->get_timetables_for_dropdown();
-		$ereignistyp_data  = $this->my_einstellungen_controller->get_ereignistypen();
-		$bildungsgang_data= $this->my_einstellungen_controller->get_bildungsgaenge();
-		
+		public function extra_tablenav($which) {
+			if ($which == "top") {
+				$user_id = get_current_user_id();
 				
-        ?>
-        <div class="alignright actions">
-			<form method="POST" action="">
-                <!-- WICHTIG: Diese Felder werden benötigt, damit WP_List_Table die Filter übernimmt -->
-                <input type="hidden" name="page" value="termine">
+				// 🟢 Bei POST: Werte übernehmen und speichern
+				if (isset($_POST['filter_action'])) {
+					$selected_bildungsgang = sanitize_text_field($_POST['filter_bildungsgang']);
+					$selected_ereignistyp  = sanitize_text_field($_POST['filter_ereignistyp']);
+					$selected_timetable    = sanitize_text_field($_POST['filter_timetable']);
 
-                <!-- 🟢 Timetable-Dropdown -->
-                <select name="filter_timetable">
-                    <option value="">Alle Timetables</option>
-                    <?php foreach ($timetable_data as $timetable) { ?>
-                       <option value="<?php echo esc_attr($timetable['id']); ?>" <?php selected($selected_timetable, $timetable['id']); ?>>
-					<?php echo esc_html($timetable['id'] . ' | ' . $timetable['bezeichnung']); ?>
-</option>
-                    <?php } ?>
-                </select>
+					update_user_meta($user_id, 'filter_bildungsgang', $selected_bildungsgang);
+					update_user_meta($user_id, 'filter_ereignistyp', $selected_ereignistyp);
+					update_user_meta($user_id, 'filter_timetable', $selected_timetable);
+				} else {
+					// 🟡 Kein POST: Werte aus user_meta laden
+					$selected_bildungsgang = get_user_meta($user_id, 'filter_bildungsgang', true);
+					$selected_ereignistyp  = get_user_meta($user_id, 'filter_ereignistyp', true);
+					$selected_timetable    = get_user_meta($user_id, 'filter_timetable', true);
+				}
+				
 
-                <!-- 🟢 Bildungsgang-Dropdown -->
-                <select name="filter_bildungsgang">
-                    <option value="">Alle Bildungsgänge</option>
-                    <?php foreach ($bildungsgang_data as $bildungsgang) { ?>
-                        <option value="<?php echo esc_attr($bildungsgang->name); ?>"
-                            <?php selected($selected_bildungsgang, $bildungsgang->name); ?>>
-                            <?php echo esc_html($bildungsgang->name . ' | ' . $bildungsgang->description); ?>
-                        </option>
-                    <?php } ?>
-                </select>
 
-                <!-- 🟢 Ereignistyp-Dropdown -->
-                <select name="filter_ereignistyp">
-                    <option value="">Alle Ereignistypen</option>
-                    <?php foreach ($ereignistyp_data as $ereignistyp) { ?>
-                        <option value="<?php echo esc_attr($ereignistyp->slug); ?>"
-                            <?php selected($selected_ereignistyp, $ereignistyp->slug); ?>>
-                            <?php echo esc_html($ereignistyp->name . ' | ' . $ereignistyp->description); ?>
-                        </option>
-                    <?php } ?>
-                </select>
+				// 🔽 Dropdown-Daten vorbereiten
+				$timetable_data     = $this->my_timetable_controller->get_timetables_for_dropdown();
+				$ereignistyp_data   = $this->my_einstellungen_controller->get_ereignistypen();
+				$bildungsgang_data  = $this->my_einstellungen_controller->get_bildungsgaenge();
+				?>
+				<div class="alignright actions">
+					<form method="POST" action="">
+						<input type="hidden" name="page" value="termine">
 
-                <input type="submit" name="filter_action" class="button action" value="Filtern">
-            </form>
-			</div>
-        <?php
-    }
-}
+						<!-- 🟢 Timetable-Dropdown -->
+						<select name="filter_timetable">
+							<option value="">Alle Timetables</option>
+							<?php foreach ($timetable_data as $timetable) { ?>
+								<option value="<?php echo esc_attr($timetable['id']); ?>" <?php selected($selected_timetable, $timetable['id']); ?>>
+									<?php echo esc_html($timetable['id'] . ' | ' . $timetable['bezeichnung']); ?>
+								</option>
+							<?php } ?>
+						</select>
+
+						<!-- 🟢 Bildungsgang-Dropdown -->
+						<select name="filter_bildungsgang">
+							<option value="">Alle Bildungsgänge</option>
+							<?php foreach ($bildungsgang_data as $bildungsgang) { ?>
+								<option value="<?php echo esc_attr($bildungsgang->name); ?>" <?php selected($selected_bildungsgang, $bildungsgang->name); ?>>
+									<?php echo esc_html($bildungsgang->name . ' | ' . $bildungsgang->description); ?>
+								</option>
+							<?php } ?>
+						</select>
+
+						<!-- 🟢 Ereignistyp-Dropdown -->
+						<select name="filter_ereignistyp">
+							<option value="">Alle Ereignistypen</option>
+							<?php foreach ($ereignistyp_data as $ereignistyp) { ?>
+								<option value="<?php echo esc_attr($ereignistyp->slug); ?>" <?php selected($selected_ereignistyp, $ereignistyp->slug); ?>>
+									<?php echo esc_html($ereignistyp->name . ' | ' . $ereignistyp->description); ?>
+								</option>
+							<?php } ?>
+						</select>
+
+						<input type="submit" name="filter_action" class="button action" value="Filtern">
+						<input type="submit" name="reset_filter" class="button" value="Zurücksetzen">
+					</form>
+				</div>
+				<?php
+			}
+		}
+
 	
 }
