@@ -27,13 +27,56 @@ class Timetable_frontend_view{
 			$this->timetable_laenge= $this->my_timetable->get_laenge();
 		 }
 	 }
-	public function print_grid():string{
-		
-//		$grid=$this->print_bildungsgaenge_objects();
-		$grid=$this->generiere_gantt($this->my_timetable->get_timetable_objects());
-		
-		return $grid;
+	public function print_grid(): string {
+		$html="";
+		/*$selected_bildungsgaenge = isset($_POST['frontend_filter_bildungsgang']) && is_array($_POST['frontend_filter_bildungsgang'])
+			? array_map('sanitize_text_field', $_POST['frontend_filter_bildungsgang']) : [];
+
+		$html = '<form method="POST">';
+		$html .= '<label for="frontend_filter_bildungsgang"><b>Bildungsgänge wählen:</b></label> ';
+		$html .= '<select name="frontend_filter_bildungsgang[]" multiple size="5" style="min-width: 200px;">';
+
+		$alle_bildungsgaenge = $this->get_bildungsgang_options();
+
+		foreach ($alle_bildungsgaenge as $bildungsgang) {
+			$selected = in_array($bildungsgang, $selected_bildungsgaenge) ? 'selected' : '';
+			$html .= "<option value='{$bildungsgang}' {$selected}>{$bildungsgang}</option>";
+		}
+
+		$html .= '</select> ';
+		$html .= '<button type="submit">Filtern</button>';
+		$html .= '</form><br>';
+
+		$gefilterte_termine = $this->filter_termine_by_bildungsgang($selected_bildungsgaenge);
+
+		$html .= $this->generiere_gantt($gefilterte_termine);
+*/
+		$html .= $this->generiere_gantt();
+		return $html;
 	}
+	
+	private function filter_termine_by_bildungsgang(array $bildungsgang_filter = []): array {
+		if (empty($bildungsgang_filter)) {
+			return $this->my_timetable->get_timetable_objects();
+		}
+
+		return array_filter(
+			$this->my_timetable->get_timetable_objects(),
+			fn($termin) => in_array($termin->get_bildungsgang(), $bildungsgang_filter)
+		);
+	}
+	
+	private function get_bildungsgang_options(): array {
+		$unique = [];
+
+		foreach ($this->my_timetable->get_timetable_objects() as $termin) {
+			$unique[] = $termin->get_bildungsgang();
+		}
+
+		return array_unique($unique);
+	}
+
+
 	
 	public function generiere_gantt(): string {
 		$today = (new DateTime())->format( 'd.m.y');
