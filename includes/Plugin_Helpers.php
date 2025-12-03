@@ -105,7 +105,7 @@ class Plugin_Helpers{
 ) ENGINE=InnoDB  $charset_collate;";
 		
 		$sql_tt_timetable = "CREATE TABLE `$tt_timetable` (
-    `id` int(10) NOT NULL AUTO_INCREMENT ,
+    `id` int(10) NOT NULL AUTO_INCREMENT,
     `bezeichnung` varchar(30) NOT NULL,
     `beschreibung` varchar(100) NOT NULL,
     `erzeugt_am` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
