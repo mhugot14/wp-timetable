@@ -136,6 +136,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 fetchTimetableData(btn.dataset.id, modal);
             }
         });
+        // Kopier-Button Logik
+        document.addEventListener('click', function(e) {
+            const copyBtn = e.target.closest('.mh-tt-copy-btn');
+            if (copyBtn) {
+                e.preventDefault();
+                const id = copyBtn.dataset.id;
+                const name = copyBtn.dataset.name;
+
+                document.getElementById('copy_source_id').value = id;
+                document.getElementById('copy_new_name').value = name + ' (Kopie)';
+
+                document.getElementById('mh-tt-copy-modal').style.display = "flex";
+            }
+        }); 
     }
 
   // ==========================================

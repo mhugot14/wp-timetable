@@ -71,7 +71,8 @@ class TimetablesListTable extends WP_List_Table
 
         return sprintf(
             '<a href="#" class="button mh-tt-timetable-edit-btn" data-id="%d">Bearbeiten</a> ' .
-            '<a href="%s" class="button" onclick="return confirm(\'Zeittafel wirklich löschen?\')">Löschen</a>',
+            '<a href="%s" class="button" onclick="return confirm(\'Zeittafel wirklich löschen?\')">Löschen</a> ' . 
+			'<a href="#" class="button mh-tt-copy-btn" data-id="'.$item->getId().'" data-name="'.$item->getBezeichnung().'">Kopieren</a>',
             $item->getId(),
             esc_url($deleteUrl)
         );
