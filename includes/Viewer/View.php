@@ -206,7 +206,14 @@ class View {
     }
 
     public function customAdminStyles(): void { wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css'); }
-    public function timetableEnqueueStyles(): void { wp_enqueue_style('timetable-frontend', MH_TT_URL . 'includes/Viewer/css/timetable_css.css'); }
+    public function timetableEnqueueStyles(): void 
+	{ 
+		 // Dashicons für das Frontend laden
+		wp_enqueue_style('dashicons');
+    
+		// Dein eigenes CSS
+		 wp_enqueue_style('timetable-frontend', MH_TT_URL . 'includes/Viewer/css/timetable_css.css');
+	}
     public function setupShortcodes(): void { add_shortcode('insertTimetable', [$this, 'shortcodeInsertTimetable']); }
     public function shortcodeInsertTimetable($atts, string $content = ''): string {
         $atts = shortcode_atts(['id' => 0, 'entwurf' => 'nein'], $atts); $id = (int)$atts['id'];
