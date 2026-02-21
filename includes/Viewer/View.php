@@ -198,12 +198,7 @@ class View {
     }
 
     // (Andere Handlers für Ferien wie gehabt...)
-    public function handleSaveFerien(): void { /* ... */ }
-    public function handleImportFerien(): void { /* ... */ }
-    public function handleDeleteFerien(): void { /* ... */ }
-    public function handleDeleteTimetable(): void { /* ... */ }
-    private function renderFerienForm(): void { /* ... */ }
-    private function renderFerienImportForm(): void { /* ... */ }
+    
 
     public function adminJavascript(): void {
         wp_enqueue_script('mh_tt_javascript', MH_TT_URL . 'includes/Viewer/js/mh_tt_javascript.js', ['jquery'], '1.5', true);
@@ -221,5 +216,102 @@ class View {
         foreach ($alleFerien as $f) { $curr = clone $f->getStartdatum(); while ($curr <= $f->getEnddatum()) { $ferienMap[$curr->format('d.m.y')] = $f->getName(); $curr->modify('+1 day'); } }
         $frontendView = new \MH\Timetable\Viewer\TimetableFrontendView($timetable, (string)$atts['entwurf'], $ferienMap);
         return $frontendView->render();
+    }
+	private function renderFerienForm(): void
+    {
+        ?>
+        <div class="postbox" style="padding: 20px; margin-bottom: 20px;">
+            <h3>Neue Ferien/Feiertag manuell hinzufügen</h3>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="mh_tt_save_ferien">
+                <?php wp_nonce_field('mh_tt_ferien_action', 'mh_tt_ferien_nonce'); ?>
+                
+                <table class="form-table">
+                    <tr>
+                        <th><label>Name</label></th>
+                        <td><input type="text" name="ferien_name" class="regular-text" required></td>
+                    </tr>
+                    <tr>
+                        <th><label>Zeitraum</label></th>
+                        <td>
+                            Von: <input type="date" name="startdatum" required> 
+                            Bis: <input type="date" name="enddatum" required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th><label>Typ</label></th>
+                        <td>
+                            <select name="typ">
+                                <option value="Ferien">Ferien</option>
+                                <option value="Feiertag">Feiertag</option>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+                <p><button type="submit" class="button button-primary">Speichern</button></p>
+            </form>
+        </div>
+        <?php
+    }
+	
+	private function renderFerienImportForm(): void
+    {
+        $years = range((int)date('Y'), (int)date('Y') + 3);
+        $bundeslaender = [
+            "NW" => "Nordrhein-Westfalen", "BW" => "Baden-Württemberg", "BY" => "Bayern",
+            "BE" => "Berlin", "BB" => "Brandenburg", "HB" => "Bremen", "HH" => "Hamburg",
+            "HE" => "Hessen", "MV" => "Mecklenburg-Vorpommern", "NI" => "Niedersachsen",
+            "RP" => "Rheinland-Pfalz", "SL" => "Saarland", "SN" => "Sachsen",
+            "ST" => "Sachsen-Anhalt", "SH" => "Schleswig-Holstein", "TH" => "Thüringen"
+        ];
+        ?>
+        <div class="postbox" style="padding: 20px; margin-top: 20px;">
+            <h3>Ferien & Feiertage per API importieren</h3>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="mh_tt_import_ferien">
+                <?php wp_nonce_field('mh_tt_import_action', 'mh_tt_import_nonce'); ?>
+
+                <table class="form-table">
+                    <tr>
+                        <th><label>Jahr & Bundesland</label></th>
+                        <td>
+                            <select name="jahr">
+                                <?php foreach ($years as $year) echo "<option value='$year'>$year</option>"; ?>
+                            </select>
+                            <select name="bundesland">
+                                <?php foreach ($bundeslaender as $code => $name) echo "<option value='$code'>$name</option>"; ?>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+                <p><button type="submit" class="button">Daten jetzt abrufen</button></p>
+            </form>
+        </div>
+        <?php
+    }
+	
+	public function handleSaveFerien(): void
+    {
+        check_admin_referer('mh_tt_ferien_action', 'mh_tt_ferien_nonce');
+        $this->ferienController->saveFerien($_POST);
+        wp_redirect(admin_url('admin.php?page=Einstellungen&message=saved'));
+        exit;
+    }
+
+    public function handleImportFerien(): void
+    {
+        check_admin_referer('mh_tt_import_action', 'mh_tt_import_nonce');
+        $count = $this->ferienController->importFromApi((int)$_POST['jahr'], sanitize_text_field($_POST['bundesland']));
+        wp_redirect(admin_url('admin.php?page=Einstellungen&message=imported&count=' . $count));
+        exit;
+    }
+
+    public function handleDeleteFerien(): void
+    {
+        $id = (int)$_GET['id'];
+        check_admin_referer('delete_ferien_' . $id);
+        $this->ferienController->deleteFerien($id);
+        wp_redirect(admin_url('admin.php?page=Einstellungen&message=deleted'));
+        exit;
     }
 }
