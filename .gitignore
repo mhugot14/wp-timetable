@@ -1,0 +1,22 @@
+
+# Composer
+vendor/
+composer.lock
+
+# IDEs
+.idea/
+.vscode/
+nbproject/
+*.swp
+*.tms
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# WordPress/Temp
+node_modules/

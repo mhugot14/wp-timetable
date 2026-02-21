@@ -1,32 +1,25 @@
 <?php
+/**
+ * Plugin Name: Timetable Schulverwaltung
+ * Version: 0.6.0
+ * Author: Michael Hugot
+ */
 
-/*
-Plugin Name: Timetable Schulverwaltung
-Plugin URI: www.lebk-muenster.de
-Description: Das Plugin generiert eine Zeittafel. Diese wird benutzt um z.B. den Zeugnisschreibungsprozess übersichtlich darzustellen.
-Version: 0.5.2
-Author: Michael Hugot
-Author URI: Berufsschulwissen.de
-License: GPLv2
-*/
+declare(strict_types=1);
 
-namespace timetable;
+namespace MH\Timetable;
 
-//Plugin Aktivierung
-define('MH_TT_FILE',__FILE__);
+if (!defined('ABSPATH')) exit;
+
+if (file_exists(__DIR__ . '/vendor/autoload.php')) {
+    require_once __DIR__ . '/vendor/autoload.php';
+}
+
 define('MH_TT_PATH', plugin_dir_path(__FILE__));
-//Includes
-require_once __DIR__ . '/includes/Plugin_Helpers.php';
-require_once __DIR__ . '/includes/viewer/View.php';
-//require_once __DIR__ . '/includes/viewer/View2.php';
- 
-register_activation_hook(MH_TT_FILE, ['timetable\Backend_Einstellungen', 'on_activate']);
+define('MH_TT_URL', plugin_dir_url(__FILE__));
 
-	
-	register_activation_hook(
-		MH_TT_FILE, 
-		['timetable\Plugin_Helpers' ,'activate']
-		);
-	
-	//startet die Ausgabe
-	new View();
+add_action('plugins_loaded', function() {
+    //error_log('DEBUG: Plugin geladen, starte Kernel');
+    $kernel = new \MH\Timetable\Kernel();
+    $kernel->boot();
+});

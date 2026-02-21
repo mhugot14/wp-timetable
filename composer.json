@@ -1,9 +1,20 @@
 {
-    
     "name": "mhugot/wp-timetable",
-    "type":"wordpress-plugin",
-    "require":{
-        "phpoffice/phpspreadsheet":"^1.17"
+    "description": "Professionelles Timetable Management",
+    "type": "wordpress-plugin",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "phpoffice/phpspreadsheet": "^1.17"
+    },
+    "autoload": {
+        "psr-4": {
+            "MH\\Timetable\\": "includes/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "allow-plugins": {
+            "composer/installers": true
+        }
     }
 }
-
