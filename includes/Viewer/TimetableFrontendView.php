@@ -45,20 +45,29 @@ class TimetableFrontendView
         return $html;
     }
 
-    private function renderHeader(array $dates, string $today): string
-    {
-        $html = '<thead class="timetablegrid_thead"><tr><th class="sticky_column">Bildungsgang</th>';
-        foreach ($dates as $date) {
-            $dateStr = $date->format('d.m.y');
-            $css = "timetable_date";
-            if (in_array($date->format('N'), ['6', '7'])) $css .= '_weekend';
-            if (isset($this->ferien[$dateStr])) $css .= '_holiday';
-            if ($dateStr === $today) $css .= ' timetable_date_today';
+   private function renderHeader(array $dates, string $today): string
+	{
+		$html = '<thead class="timetablegrid_thead"><tr>';
+		// Erste Spalte bleibt horizontal
+		$html .= '<th class="sticky_column">Bildungsgang</th>';
 
-            $html .= '<th class="' . $css . '">' . $date->format('d.m.') . '<br>' . $this->getWochentag($date) . '</th>';
-        }
-        return $html . '</tr></thead>';
-    }
+		foreach ($dates as $date) {
+			$dateStr = $date->format('d.m.y');
+			$css = "timetable_date";
+			if (in_array($date->format('N'), ['6', '7'])) $css .= '_weekend';
+			if (isset($this->ferien[$dateStr])) $css .= '_holiday';
+			if ($dateStr === $today) $css .= ' timetable_date_today';
+
+			// WICHTIG: Der Wrapper für die vertikale Ausrichtung
+			$html .= '<th class="' . $css . '">';
+			$html .= '<div class="vertical-header-wrapper">';
+			$html .= '<span class="date-part">' . $date->format('d.m.') . '</span>';
+			$html .= '<span class="day-part">' . $this->getWochentag($date) . '</span>';
+			$html .= '</div>';
+			$html .= '</th>';
+		}
+		return $html . '</tr></thead>';
+	}
 
     private function renderBody(array $dates, string $today): string
     {
