@@ -5,6 +5,8 @@ namespace MH\Timetable\Controller;
 
 use MH\Timetable\Model\Entity\Timetable;
 use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
+use MH\Timetable\Service\TimetableCopyService;
+use DateTime;
 
 /**
  * Controller für die Verwaltung von Zeittafeln (Timetables).
@@ -12,10 +14,12 @@ use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 class TimetableController
 {
     private TimetableRepositoryInterface $repository;
+	private TimetableCopyService $copyService;
 
-    public function __construct(TimetableRepositoryInterface $repository)
+    public function __construct(TimetableRepositoryInterface $repository, TimetableCopyService $copyService) 
     {
         $this->repository = $repository;
+		$this->copyService = $copyService;
     }
 
     /**
@@ -165,5 +169,14 @@ class TimetableController
 
 			// wp_send_json_success ruft automatisch die() auf, 
 			// das verhindert, dass WordPress eine '0' anhängt.
+		}
+		
+		public function copyTimetable(array $data): bool
+		{
+			$sourceId = (int)$data['source_id'];
+			$newName = sanitize_text_field($data['new_name']);
+			$newEndDate = new DateTime($data['new_end_date']);
+
+			return $this->copyService->duplicate($sourceId, $newName, $newEndDate);
 		}
 }

@@ -4,59 +4,58 @@ declare(strict_types=1);
 namespace MH\Timetable;
 
 use MH\Timetable\Model\Repository\WpdbTermineRepository;
-use MH\Timetable\Controller\TerminController;
-use MH\Timetable\Viewer\View;
 use MH\Timetable\Model\Repository\WpdbTimetableRepository;
+use MH\Timetable\Model\Repository\WpdbFerienRepository;
+use MH\Timetable\Service\HolidayApiService;
+use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\IcalService;
+use MH\Timetable\Service\TimetableCopyService;
+use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
+use MH\Timetable\Controller\FerienController;
+use MH\Timetable\Viewer\View;
 
-/**
- * Der Kernel ist die zentrale Instanz für das Dependency Injection Handling.
- * Er erstellt alle Objekte und reicht sie an die nächste Schicht weiter.
- */
 class Kernel
 {
-    /**
-     * Startet das Plugin-System.
-     */
-	public function boot(): void
-	{
-		//wp_die('DEBUG: Kernel Boot erreicht!'); 
-		global $wpdb;
-		// Services
-		$holidayApi = new \MH\Timetable\Service\HolidayApiService();
-		$taxonomyService = new \MH\Timetable\Service\TaxonomyService();
-		
-		// Repositories
-		$termineRepo = new \MH\Timetable\Model\Repository\WpdbTermineRepository($wpdb);
-		$timetableRepo = new \MH\Timetable\Model\Repository\WpdbTimetableRepository($wpdb);
-		$ferienRepo = new \MH\Timetable\Model\Repository\WpdbFerienRepository($wpdb);
+    public function boot(): void
+    {
+        global $wpdb;
 
-		// Controller
-		$terminController = new \MH\Timetable\Controller\TerminController($termineRepo);
-		$timetableController = new \MH\Timetable\Controller\TimetableController($timetableRepo);
-		$ferienController = new \MH\Timetable\Controller\FerienController($ferienRepo, $holidayApi);
+        // --- 1. REPOSITORIES (Zuerst! Weil alles andere davon abhängt) ---
+        $termineRepo   = new WpdbTermineRepository($wpdb);
+        $timetableRepo = new WpdbTimetableRepository($wpdb);
+        $ferienRepo    = new WpdbFerienRepository($wpdb);
 
-		// View (Orchestrator)
-		 new \MH\Timetable\Viewer\View(
-				$terminController,
-				$timetableController,
-				$ferienController, // Neu
-				$termineRepo,
-				$timetableRepo,
-				$ferienRepo,       // Neu
-				$taxonomyService   // Neu
-				);
-		     // Hooks registrieren, die nicht in der View sitzen
-		add_action('init', [$taxonomyService, 'registerTaxonomies']);
-		add_action('wp_head', [$taxonomyService, 'generateDynamicCss']);
-		add_action('admin_head', [$taxonomyService, 'generateDynamicCss']);
-		add_action('wp_ajax_mh_tt_get_timetable', [$timetableController, 'getTimetableDataAjax']);
-		 add_action('wp_ajax_mh_tt_get_termin', [$terminController, 'getTerminDataAjax']);
-		  add_action('admin_enqueue_scripts', function() {
-        wp_localize_script('mh_tt_javascript', 'mh_tt_params', [
-            'nonce' => wp_create_nonce('mh_tt_nonce')
-        ]);
-		
-    });
-	}
+        // --- 2. SERVICES (Danach! Sie brauchen oft Repositories) ---
+        $holidayApi      = new HolidayApiService();
+        $taxonomyService = new TaxonomyService();
+        $icalService     = new IcalService();
+        
+        // Jetzt sind $timetableRepo und $termineRepo bekannt:
+        $copyService     = new TimetableCopyService($timetableRepo, $termineRepo);
+
+        // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
+        $terminController    = new TerminController($termineRepo);
+        $timetableController = new TimetableController($timetableRepo, $copyService);
+        $ferienController    = new FerienController($ferienRepo, $holidayApi);
+
+        // --- 4. VIEW (Orchestrator) ---
+        new View(
+            $terminController,
+            $timetableController,
+            $ferienController,
+            $termineRepo,
+            $timetableRepo,
+            $ferienRepo,
+            $taxonomyService
+        );
+
+        // --- 5. HOOKS & AJAX ---
+        add_action('init', [$taxonomyService, 'registerTaxonomies']);
+        add_action('wp_head', [$taxonomyService, 'generateDynamicCss']);
+        add_action('admin_head', [$taxonomyService, 'generateDynamicCss']);
+        
+        add_action('wp_ajax_mh_tt_get_termin', [$terminController, 'getTerminDataAjax']);
+        add_action('wp_ajax_mh_tt_get_timetable', [$timetableController, 'getTimetableDataAjax']);
+    }
 }

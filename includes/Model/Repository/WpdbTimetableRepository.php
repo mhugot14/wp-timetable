@@ -40,17 +40,20 @@ class WpdbTimetableRepository implements TimetableRepositoryInterface
 
     public function create(Timetable $timetable): bool
     {
-        $result = $this->wpdb->insert(
-            $this->tableName,
-            [
-                'bezeichnung'  => $timetable->getBezeichnung(),
-                'beschreibung' => $timetable->getBeschreibung(),
-                'erzeugt_am'   => $timetable->getErzeugtAm()->format('Y-m-d H:i:s')
-            ],
-            ['%s', '%s', '%s']
-        );
+         $result = $this->wpdb->insert(
+			$this->tableName,
+			[
+				'bezeichnung'  => $timetable->getBezeichnung(),
+				'beschreibung' => $timetable->getBeschreibung(),
+				'erzeugt_am'   => $timetable->getErzeugtAm()->format('Y-m-d H:i:s')
+			]
+		);
 
-        return false !== $result;
+		if ($result) {
+			$timetable->setId((int)$this->wpdb->insert_id); // ID vom Server setzen!
+		}
+
+		return false !== $result;
     }
 
     public function update(int $id, Timetable $timetable): bool

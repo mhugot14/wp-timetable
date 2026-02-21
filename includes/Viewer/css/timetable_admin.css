@@ -1,0 +1,57 @@
+/* MH Timetable - Admin Styles */
+
+/* Das Modal-Overlay */
+.mh-tt-modal {
+    position: fixed;
+    z-index: 999999;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: none; /* Wird per JS auf flex gesetzt */
+    align-items: center;
+    justify-content: center;
+}
+
+/* Das Modal-Fenster */
+.mh-tt-modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 650px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    position: relative;
+}
+
+/* Schließen-Button */
+.mh-tt-close {
+    position: absolute;
+    right: 20px;
+    top: 10px;
+    font-size: 30px;
+    cursor: pointer;
+    color: #999;
+    line-height: 1;
+}
+.mh-tt-close:hover { color: #d63638; }
+
+/* Formular-Optimierung im Modal */
+.mh-tt-modal-content h3 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.mh-tt-modal-content .form-table th {
+    width: 150px;
+    padding: 15px 0;
+}
+
+/* Status-Farben für das Grid (auch im Admin nützlich) */
+.holiday { background-color: #ffeb3b !important; }
+.weekend { background-color: #f5f5f5 !important; }
+.today { border: 2px solid #2271b1 !important; }
