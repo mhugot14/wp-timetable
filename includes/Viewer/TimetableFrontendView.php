@@ -72,8 +72,13 @@ class TimetableFrontendView {
 
     private function generiereGantt(): string {
         $today = (new DateTime())->format('d.m.y');
-        $html = '<h3>' . esc_html($this->timetable->getBezeichnung()) . ($this->entwurf === 'ja' ? ' <span style="color:red;">(ENTWURF)</span>' : '') . '</h3>';
-        $html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
+	
+	// 🟢 Entwurf-Hinweis in der Überschrift
+		$entwurfSuffix = ($this->entwurf === 'ja') 
+			? ' <span style="color:#d63638; font-weight:bold; text-transform:uppercase; font-size:0.6em; vertical-align:middle; margin-left:10px;">(Entwurf - noch nicht verbindlich)</span>' 
+			: '';
+		$html = '<h3>' . esc_html($this->timetable->getBezeichnung()) . $entwurfSuffix . '</h3>';
+		$html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
 
         $dates = $this->timetable->getDateRange();
         $html .= '<div class="timetable-container"><table class="timetablegrid">';
@@ -111,8 +116,20 @@ class TimetableFrontendView {
         foreach ($grouped as $bg => $bgTermine) {
             $downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
             
+			// 🟢 iCal-Link nur anzeigen, wenn KEIN Entwurf
+			$icalLink = '';
+			if ($this->entwurf !== 'ja') {
+				$downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
+				$icalLink = ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a>';
+			}
+
+    $html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span>' . $icalLink . '</td>';
+	
+	/*
             $html .= '<tr data-bg="' . esc_attr($bg) . '">';
             $html .= '<td class="sticky_column">' . esc_html($bg) . ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a></td>';
+	 * 
+	 */
             
             $idx = 0;
             foreach ($bgTermine as $termin) {

@@ -27,14 +27,25 @@
 
 /* --- Header mit neuem Blau --- */
 .timetablegrid_thead th {
-    background-color: #002a55; /* Dein Wunsch-Blau */
+    background-color: #002a55;
     color: white;
-    height: 110px; /* Genug Platz für die größere Schrift */
+    height: 110px;
     padding: 0;
     vertical-align: middle;
     border: 1px solid #001a35;
+     padding: 0 !important;
+    margin: 0 !important;
+    line-height: 0; /* Verhindert Phantom-Abstände unter dem Text */
 }
 
+.timetablegrid_thead th.timetable_date_weekend {
+    background-color: #001a35; /* Ein deutlich dunkleres Blau für Sa/So */
+    border-left: 1px solid #002a55;
+}
+/* Optional: Den Text im Wochenend-Header etwas blasser machen */
+.timetable_date_weekend .vertical-header-wrapper {
+    color: #b0c4de; /* LightSteelBlue */
+}
 /* Der Dreh-Wrapper mit größerer Schrift */
 .vertical-header-wrapper {
     writing-mode: vertical-rl;
@@ -62,16 +73,17 @@
 
 /* --- Erste Spalte (Sticky) --- */
 .timetablegrid .sticky_column {
-    position: sticky;
+     position: sticky;
     left: 0;
-    width: 180px;
+    width: 140px; /* Etwas schmaler */
     background: #fcfcfc;
     z-index: 100;
     text-align: left;
-    padding: 0 12px;
-    border-right: 3px solid #002a55; /* Passender blauer Rand */
-    writing-mode: horizontal-tb;
-    transform: none;
+    padding: 0 8px !important; /* Weniger Polsterung */
+    border-right: 2px solid #002a55;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .timetablegrid_thead th.sticky_column {
@@ -161,6 +173,32 @@
     border: 1px solid #ccc;
     border-radius: 4px;
     min-width: 200px;
+}
+
+/* Der Name des Bildungsgangs */
+.timetablegrid .bg-name {
+    display: inline-block;
+    font-weight: 600;
+    font-size: 12px !important; /* Deutlich kleiner */
+    color: #333;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+/* Der iCal Link daneben */
+.timetablegrid .ical-small-link {
+    display: inline-block;
+    font-size: 10px !important; /* Ganz dezent */
+    color: #2271b1;
+    text-decoration: none;
+    margin-left: 2px;
+    vertical-align: middle;
+    opacity: 0.7;
+}
+
+.timetablegrid .ical-small-link:hover {
+    opacity: 1;
+    text-decoration: underline;
 }
 
 .mh-tt-frontend-wrapper {

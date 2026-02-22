@@ -207,12 +207,19 @@ class View {
 
     public function customAdminStyles(): void { wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css'); }
     public function timetableEnqueueStyles(): void 
-	{ 
-		 // Dashicons für das Frontend laden
+	{
 		wp_enqueue_style('dashicons');
-    
-		// Dein eigenes CSS
-		 wp_enqueue_style('timetable-frontend', MH_TT_URL . 'includes/Viewer/css/timetable_css.css');
+
+		$css_path = MH_TT_PATH . 'includes/Viewer/css/timetable_css.css';
+		// Dynamische Version basierend auf dem Speicherdatum der Datei
+		$ver = file_exists($css_path) ? filemtime($css_path) : '1.0.0';
+
+		wp_enqueue_style(
+			'timetable-frontend',
+			MH_TT_URL . 'includes/Viewer/css/timetable_css.css',
+			[],
+			(string)$ver // Zwingt den Browser zum Neuladen bei jeder Änderung
+		);
 	}
     public function setupShortcodes(): void { add_shortcode('insertTimetable', [$this, 'shortcodeInsertTimetable']); }
     public function shortcodeInsertTimetable($atts, string $content = ''): string {
