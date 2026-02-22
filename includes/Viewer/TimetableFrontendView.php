@@ -102,7 +102,6 @@ class TimetableFrontendView {
         return $html . '</tr></thead>';
     }
 
-		// In TimetableFrontendView.php die renderBody Methode:
 		private function renderBody(array $dates, string $today): string {
 			$html = '<tbody>';
 			$grouped = [];
@@ -111,28 +110,47 @@ class TimetableFrontendView {
 			}
 
 			foreach ($grouped as $bg => $bgTermine) {
-				$downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
+				// 1. iCal-Link Logik (Nur wenn kein Entwurf)
+				$icalLink = '';
+				if ($this->entwurf !== 'ja') {
+					$downloadUrl = add_query_arg([
+						'download_ical' => 1, 
+						'timetable_id' => $this->timetable->getId(), 
+						'bg' => $bg
+					], home_url($_SERVER['REQUEST_URI']));
 
-				// 🟢 WICHTIG: trim() um den Bildungsgang, um Leerzeichen-Fehler zu vermeiden
+					$icalLink = ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a>';
+				}
+
+				// 2. Filter-Slug vorbereiten (trim gegen Leerzeichen-Fehler)
 				$bg_slug = trim((string)$bg);
 
 				$html .= '<tr data-bg="' . esc_attr($bg_slug) . '">';
-				$html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span> <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a></td>';
+				$html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span>' . $icalLink . '</td>';
 
+				// 3. Zeitstrahl-Zellen rendern
 				$idx = 0;
 				foreach ($bgTermine as $termin) {
+					// Leere Zellen vor dem Termin
 					while ($idx < count($dates) && $dates[$idx] < $termin->getBeginn()) {
 						$html .= $this->renderEmptyCell($dates[$idx], $today);
 						$idx++;
 					}
+
+					// Der Termin-Balken
 					if ($idx < count($dates)) {
 						$dauer = $termin->getDauer();
 						$label = esc_html($termin->getEreignistyp());
-						if ($dauer > 4) $label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
+						if ($dauer > 4) {
+							$label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
+						}
+
 						$html .= '<td colspan="' . $dauer . '" class="td_' . sanitize_title($termin->getEreignistyp()) . '">' . $label . '</td>';
 						$idx += $dauer;
 					}
 				}
+
+				// Restliche leere Zellen nach den Terminen
 				while ($idx < count($dates)) {
 					$html .= $this->renderEmptyCell($dates[$idx], $today);
 					$idx++;
