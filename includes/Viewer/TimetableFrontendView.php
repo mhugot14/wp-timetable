@@ -62,12 +62,8 @@ class TimetableFrontendView {
         $html .= '</div>'; // Ende wrapper
 
         // 3. JavaScript (Filter & Switcher)
-        if (!wp_script_is('mh-tt-frontend-js', 'done')) {
-            $html .= $this->getInlineJs();
-            wp_script_add_data('mh-tt-frontend-js', 'done', true);
-        }
-
-        return $html;
+		$html .= $this->getInlineJs(); // Einfach immer ausgeben
+		return $html;
     }
 
     private function generiereGantt(): string {
@@ -106,53 +102,45 @@ class TimetableFrontendView {
         return $html . '</tr></thead>';
     }
 
-    private function renderBody(array $dates, string $today): string {
-        $html = '<tbody>';
-        $grouped = [];
-        foreach ($this->timetable->getTermine() as $t) {
-            $grouped[$t->getBildungsgang()][] = $t;
-        }
-
-        foreach ($grouped as $bg => $bgTermine) {
-            $downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
-            
-			// 🟢 iCal-Link nur anzeigen, wenn KEIN Entwurf
-			$icalLink = '';
-			if ($this->entwurf !== 'ja') {
-				$downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
-				$icalLink = ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a>';
+		// In TimetableFrontendView.php die renderBody Methode:
+		private function renderBody(array $dates, string $today): string {
+			$html = '<tbody>';
+			$grouped = [];
+			foreach ($this->timetable->getTermine() as $t) {
+				$grouped[$t->getBildungsgang()][] = $t;
 			}
 
-    $html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span>' . $icalLink . '</td>';
-	
-	/*
-            $html .= '<tr data-bg="' . esc_attr($bg) . '">';
-            $html .= '<td class="sticky_column">' . esc_html($bg) . ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a></td>';
-	 * 
-	 */
-            
-            $idx = 0;
-            foreach ($bgTermine as $termin) {
-                while ($idx < count($dates) && $dates[$idx] < $termin->getBeginn()) {
-                    $html .= $this->renderEmptyCell($dates[$idx], $today);
-                    $idx++;
-                }
-                if ($idx < count($dates)) {
-                    $dauer = $termin->getDauer();
-                    $label = esc_html($termin->getEreignistyp());
-                    if ($dauer > 4) $label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
-                    $html .= '<td colspan="' . $dauer . '" class="td_' . sanitize_title($termin->getEreignistyp()) . '">' . $label . '</td>';
-                    $idx += $dauer;
-                }
-            }
-            while ($idx < count($dates)) {
-                $html .= $this->renderEmptyCell($dates[$idx], $today);
-                $idx++;
-            }
-            $html .= '</tr>';
-        }
-        return $html . '</tbody>';
-    }
+			foreach ($grouped as $bg => $bgTermine) {
+				$downloadUrl = add_query_arg(['download_ical' => 1, 'timetable_id' => $this->timetable->getId(), 'bg' => $bg], home_url($_SERVER['REQUEST_URI']));
+
+				// 🟢 WICHTIG: trim() um den Bildungsgang, um Leerzeichen-Fehler zu vermeiden
+				$bg_slug = trim((string)$bg);
+
+				$html .= '<tr data-bg="' . esc_attr($bg_slug) . '">';
+				$html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span> <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a></td>';
+
+				$idx = 0;
+				foreach ($bgTermine as $termin) {
+					while ($idx < count($dates) && $dates[$idx] < $termin->getBeginn()) {
+						$html .= $this->renderEmptyCell($dates[$idx], $today);
+						$idx++;
+					}
+					if ($idx < count($dates)) {
+						$dauer = $termin->getDauer();
+						$label = esc_html($termin->getEreignistyp());
+						if ($dauer > 4) $label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
+						$html .= '<td colspan="' . $dauer . '" class="td_' . sanitize_title($termin->getEreignistyp()) . '">' . $label . '</td>';
+						$idx += $dauer;
+					}
+				}
+				while ($idx < count($dates)) {
+					$html .= $this->renderEmptyCell($dates[$idx], $today);
+					$idx++;
+				}
+				$html .= '</tr>';
+			}
+			return $html . '</tbody>';
+		}
 
     private function renderEmptyCell(DateTime $date, string $today): string {
         $dateStr = $date->format('d.m.y');
@@ -174,35 +162,53 @@ class TimetableFrontendView {
         return $map[$date->format('N')];
     }
 
-    private function getInlineJs(): string {
-        return '<script>
-        document.addEventListener("click", function(e) {
-            const btn = e.target.closest(".tt-switch-btn");
-            if (!btn) return;
-            const wrapper = btn.closest(".mh-tt-frontend-wrapper");
-            wrapper.querySelectorAll(".tt-switch-btn").forEach(b => b.classList.remove("active"));
-            btn.classList.add("active");
-            wrapper.querySelectorAll(".tt-view-container").forEach(c => c.style.display = "none");
-            document.getElementById(btn.dataset.view).style.display = "block";
-        });
-        document.addEventListener("change", function(e) {
-            const filter = e.target.closest(".tt-bg-filter");
-            if (!filter) return;
-            const wrapper = filter.closest(".mh-tt-frontend-wrapper");
-            const val = filter.value;
-            wrapper.querySelectorAll("[data-bg]").forEach(el => {
-                el.style.display = (val === "" || el.dataset.bg === val) ? "" : "none";
-            });
-            wrapper.querySelectorAll(".tt-list-date-divider").forEach(div => {
-                let hasVisible = false;
-                let next = div.nextElementSibling;
-                while(next && next.classList.contains("tt-list-card")) {
-                    if(next.style.display !== "none") { hasVisible = true; break; }
-                    next = next.nextElementSibling;
-                }
-                div.style.display = hasVisible ? "" : "none";
-            });
-        });
-        </script>';
-    }
+  // Und die getInlineJs Methode:
+		private function getInlineJs(): string {
+			return '<script>
+			document.addEventListener("DOMContentLoaded", function() {
+				// Filter-Logik
+				document.addEventListener("change", function(e) {
+					const filter = e.target.closest(".tt-bg-filter");
+					if (!filter) return;
+
+					const wrapper = filter.closest(".mh-tt-frontend-wrapper");
+					const val = filter.value.trim();
+
+					// Alle filterbaren Elemente suchen
+					wrapper.querySelectorAll("[data-bg]").forEach(el => {
+						const bgValue = el.dataset.bg.trim();
+						if (val === "" || bgValue === val) {
+							el.classList.remove("tt-hidden");
+						} else {
+							el.classList.add("tt-hidden");
+						}
+					});
+
+					// Divider in der Liste fixen
+					wrapper.querySelectorAll(".tt-list-date-divider").forEach(div => {
+						let hasVisible = false;
+						let next = div.nextElementSibling;
+						while(next && next.classList.contains("tt-list-card")) {
+							if(!next.classList.contains("tt-hidden")) { hasVisible = true; break; }
+							next = next.nextElementSibling;
+						}
+						if(hasVisible) div.classList.remove("tt-hidden");
+						else div.classList.add("tt-hidden");
+					});
+				});
+
+				// Switcher-Logik (unverändert)
+				document.addEventListener("click", function(e) {
+					const btn = e.target.closest(".tt-switch-btn");
+					if (!btn) return;
+					const wrapper = btn.closest(".mh-tt-frontend-wrapper");
+					wrapper.querySelectorAll(".tt-switch-btn").forEach(b => b.classList.remove("active"));
+					btn.classList.add("active");
+					wrapper.querySelectorAll(".tt-view-container").forEach(c => c.style.display = "none");
+					const target = document.getElementById(btn.dataset.view);
+					if (target) target.style.display = "block";
+				});
+			});
+			</script>';
+		}
 }
