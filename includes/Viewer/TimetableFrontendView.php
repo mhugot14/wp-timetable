@@ -49,7 +49,12 @@ class TimetableFrontendView {
 		</div>';
         
         $html .= '</div>'; // Ende tt-controls-row
-
+        // 🟢 Entwurf-Hinweis in der Überschrift
+	$entwurfSuffix = ($this->entwurf === 'ja') 
+			? ' <span style="color:#d63638; font-weight:bold; text-transform:uppercase; font-size:0.6em; vertical-align:middle; margin-left:10px;">(Entwurf - noch nicht verbindlich)</span>' 
+			: '';
+	$html .= '<h3>' . esc_html($this->timetable->getBezeichnung()) . $entwurfSuffix . '</h3>';
+	$html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
         // 2. Container für die Ansichten
         $html .= '<div id="tt-view-gantt-' . $uid . '" class="tt-view-container">' . $this->generiereGantt() . '</div>';
         
@@ -69,15 +74,8 @@ class TimetableFrontendView {
     private function generiereGantt(): string {
         $today = (new DateTime())->format('d.m.y');
 	
-	// 🟢 Entwurf-Hinweis in der Überschrift
-		$entwurfSuffix = ($this->entwurf === 'ja') 
-			? ' <span style="color:#d63638; font-weight:bold; text-transform:uppercase; font-size:0.6em; vertical-align:middle; margin-left:10px;">(Entwurf - noch nicht verbindlich)</span>' 
-			: '';
-		$html = '<h3>' . esc_html($this->timetable->getBezeichnung()) . $entwurfSuffix . '</h3>';
-		$html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
-
         $dates = $this->timetable->getDateRange();
-        $html .= '<div class="timetable-container"><table class="timetablegrid">';
+        $html = '<div class="timetable-container"><table class="timetablegrid">';
         $html .= $this->renderHeader($dates, $today);
         $html .= $this->renderBody($dates, $today);
         $html .= '</table></div>';
