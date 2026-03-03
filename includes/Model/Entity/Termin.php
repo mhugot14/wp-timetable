@@ -130,4 +130,15 @@ class Termin
     {
         $this->timetableId = $timetableId;
     }
+
+    public function __clone()
+    {
+        if (isset($this->beginn)) {
+            $this->beginn = clone $this->beginn;
+        }
+        if (isset($this->ende)) {
+            $this->ende = clone $this->ende;
+        }
+        $this->id = null; // Die ID muss bei einer Kopie immer genullt werden
+    }
 }

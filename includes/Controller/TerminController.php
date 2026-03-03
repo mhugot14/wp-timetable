@@ -288,4 +288,20 @@ class TerminController
 			$this->repository->update((int)$id, $termin);
 		}
 	}
+        /**
+        * Kopiert mehrere Termine in eine Ziel-Zeittafel.
+        */
+       public function processBulkCopy(array $ids, int $targetTimetableId): void
+       {
+           foreach ($ids as $id) {
+               $original = $this->repository->find((int)$id);
+               if (!$original) continue;
+
+               // Wir nutzen den PHP clone Befehl (triggert unsere __clone Methode)
+               $copy = clone $original;
+               $copy->setTimetableId($targetTimetableId);
+
+               $this->repository->create($copy);
+           }
+       }
 }

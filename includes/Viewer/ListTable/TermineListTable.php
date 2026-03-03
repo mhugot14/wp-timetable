@@ -179,7 +179,9 @@ class TermineListTable extends WP_List_Table
 
     public function get_bulk_actions(): array
     {
-        return ['bulk-delete' => 'Löschen', 'bulk-edit' => 'Mehrfachänderung'];
+        return ['bulk-delete' => 'Löschen', 
+                'bulk-edit' => 'Mehrfachänderung',
+                'bulk-copy'   => 'Kopieren'];
     }
 
     public function process_bulk_action(): void

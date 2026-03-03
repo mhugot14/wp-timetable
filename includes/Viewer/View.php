@@ -58,6 +58,7 @@ class View {
             if ($_GET['action'] === 'delete_ferien') add_action('admin_init', [$this, 'handleDeleteFerien']);
             if ($_GET['action'] === 'delete_timetable') add_action('admin_init', [$this, 'handleDeleteTimetable']);
         }
+        add_action('admin_post_mh_tt_bulk_copy_termin', [$this, 'handleBulkCopyTermin']);
     }
 
     public function createMenu(): void {
@@ -86,6 +87,7 @@ class View {
         $table->display();
         echo '</form></div>';
         $this->renderModalContainer();
+        $this->renderBulkCopyModal();      // 🟢 Das Kopier-Modal für Termine
     }
 
     public function renderEinstellungen(): void {
@@ -120,6 +122,7 @@ class View {
                     </select></td></tr>
                     <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" required></td></tr>
                     <tr><th>Ereignistyp</th><td><select name="ereignistyp" id="f_ereignistyp" required>
+                                  <option value="">-- wählen --</option> 
                         <?php foreach ($ereignistypen as $et) printf('<option value="%s">%s</option>', esc_attr($et->name), esc_html($et->name)); ?>
                     </select></td></tr>
                     <tr><th>Zeitraum</th><td>Von: <input type="date" name="beginn" id="f_beginn" required> Bis: <input type="date" name="ende" id="f_ende" required></td></tr>
@@ -326,6 +329,57 @@ class View {
         check_admin_referer('delete_ferien_' . $id);
         $this->ferienController->deleteFerien($id);
         wp_redirect(admin_url('admin.php?page=Einstellungen&message=deleted'));
+        exit;
+    }
+    
+        private function renderBulkCopyModal(): void
+    {
+        $timetables = $this->timetableController->getTimetablesForDropdown();
+        ?>
+        <div id="mh-tt-bulk-copy-modal" class="mh-tt-modal" style="display:none;">
+            <div class="mh-tt-modal-content">
+                <span class="mh-tt-close">&times;</span>
+                <h3>Termine kopieren</h3>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="mh_tt_bulk_copy_termin">
+                    <input type="hidden" name="selected_ids" id="bulk_copy_ids" value="">
+                    <?php wp_nonce_field('bulk_copy_termin_nonce', 'bulk_copy_termin_nonce'); ?>
+
+                    <p>Wählen Sie die Ziel-Zeittafel aus, in die die markierten Termine kopiert werden sollen:</p>
+
+                    <table class="form-table">
+                        <tr>
+                            <th>Ziel-Zeittafel</th>
+                            <td>
+                                <select name="target_timetable_id" required>
+                                    <?php foreach ($timetables as $tt): ?>
+                                        <option value="<?php echo $tt['id']; ?>"><?php echo esc_html($tt['id'] . ' | ' . $tt['bezeichnung']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                    </table>
+                    <div style="margin-top:20px;">
+                        <button type="submit" class="button button-primary">Kopieren ausführen</button>
+                        <button type="button" class="button mh-tt-close-btn">Abbrechen</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <?php
+    }
+    public function handleBulkCopyTermin(): void
+    {
+        check_admin_referer('bulk_copy_termin_nonce', 'bulk_copy_termin_nonce');
+
+        $ids = explode(',', $_POST['selected_ids'] ?? '');
+        $targetId = (int)$_POST['target_timetable_id'];
+
+        if (!empty($ids) && $targetId > 0) {
+            $this->terminController->processBulkCopy($ids, $targetId);
+        }
+
+        wp_redirect(admin_url('admin.php?page=termine&message=bulk_copy_success'));
         exit;
     }
 }

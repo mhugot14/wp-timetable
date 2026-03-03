@@ -34,10 +34,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     // FUNKTIONEN FÜR TERMINE
     // ==========================================
-    function initTerminLogic(modal, form) {
+function initTerminLogic(modal, form) {
         const title = document.getElementById('modal-title');
 
-        // NEU-Button
+        // 1. NEU-Button
         document.querySelectorAll('.mh-tt-add-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // EDIT-Button (Event Delegation)
+        // 2. EDIT-Button (Event Delegation)
         document.addEventListener('click', function(e) {
             const btn = e.target.closest('.mh-tt-edit-btn');
             if (btn) {
@@ -65,30 +65,67 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Datum-Synchronisation
+        // 3. Datum-Synchronisation
         const vonField = document.getElementById('f_beginn');
         const bisField = document.getElementById('f_ende');
         if (vonField && bisField) {
             vonField.addEventListener('change', () => {
-                if (!bisField.value || bisField.value < vonField.value) bisField.value = vonField.value;
-            });
-        }
-
-        // Bulk-Edit Logik
-        const bulkApplyBtn = document.getElementById('doaction');
-        if (bulkApplyBtn) {
-            bulkApplyBtn.addEventListener('click', function(e) {
-                const actionSelect = document.querySelector('select[name="action"]');
-                if (actionSelect && actionSelect.value === 'bulk-edit') {
-                    e.preventDefault();
-                    const ids = Array.from(document.querySelectorAll('input[name="bulk-delete[]"]:checked')).map(cb => cb.value);
-                    if (ids.length > 0) openBulkModal(ids, modal, form, title);
-                    else alert('Bitte wählen Sie mindestens einen Termin aus.');
+                if (!bisField.value || bisField.value < vonField.value) {
+                    bisField.value = vonField.value;
                 }
             });
         }
-    }
 
+        // 4. ZENTRALE BULK-LOGIK (Kombiniert für Edit & Copy)
+        // Wir suchen alle Buttons mit der ID doaction (oben) und doaction2 (unten)
+        const bulkButtons = document.querySelectorAll('#doaction, #doaction2');
+        
+        bulkButtons.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                // Finde das dazugehörige Select-Feld (neben dem geklickten Button)
+                const actionSelect = this.parentElement.querySelector('select[name^="action"]');
+                if (!actionSelect) return;
+
+                const selectedAction = actionSelect.value;
+
+                // Prüfen, ob eine unserer Aktionen gewählt wurde
+                if (selectedAction === 'bulk-edit' || selectedAction === 'bulk-copy') {
+                    e.preventDefault();
+
+                    // Markierte IDs sammeln
+                    const checkedBoxes = document.querySelectorAll('input[name="bulk-delete[]"]:checked');
+                    const ids = Array.from(checkedBoxes).map(cb => cb.value);
+
+                    if (ids.length === 0) {
+                        alert('Bitte wählen Sie mindestens einen Termin aus.');
+                        return;
+                    }
+
+                    if (selectedAction === 'bulk-edit') {
+                        // Ruft die Hilfsfunktion für das Massen-Edit-Modal auf
+                        if (typeof openBulkModal === 'function') {
+                            openBulkModal(ids, modal, form, title);
+                        } else {
+                            console.error('Funktion openBulkModal nicht gefunden!');
+                        }
+                    } 
+                    else if (selectedAction === 'bulk-copy') {
+                        // Öffnet das Kopier-Modal
+                        const copyModal = document.getElementById('mh-tt-bulk-copy-modal');
+                        const copyIdField = document.getElementById('bulk_copy_ids');
+                        
+                        if (copyModal && copyIdField) {
+                            copyIdField.value = ids.join(',');
+                            copyModal.style.display = "flex";
+                        } else {
+                            console.error('Kopier-Modal oder ID-Feld nicht im HTML gefunden!');
+                        }
+                    }
+                }
+            });
+        });
+    }
+    
     function openBulkModal(ids, modal, form, title) {
         form.reset();
         document.getElementById('f_id').value = ids.join(',');
