@@ -30,15 +30,21 @@ class TimetableFrontendView {
         // 1. Controls Row (Filter + Switcher)
         $html .= '<div class="tt-controls-row">';
         
-        // Filter
-        $html .= '<div class="tt-filter-box">';
-        $html .= '<strong>Filter:</strong> ';
-        $html .= '<select class="tt-bg-filter">';
-        $html .= '<option value="">Alle Bildungsgänge</option>';
-        foreach ($this->getUniqueBildungsgaenge() as $bg) {
-            $html .= '<option value="' . esc_attr($bg) . '">' . esc_html($bg) . '</option>';
-        }
-        $html .= '</select></div>';
+                // Ersetze den Bereich der tt-filter-box durch diesen Code:
+         $html .= '<div class="tt-filter-box">';
+         $html .= '<strong>Filter:</strong> ';
+         $html .= '<div class="tt-multiselect-container">';
+         $html .= '<label class="tt-select-all-label"><input type="checkbox" class="tt-select-all" checked> <em>Alle auswählen</em></label>';
+
+         foreach ($this->getUniqueBildungsgaenge() as $bg) {
+             $bg_slug = trim((string)$bg);
+             $html .= sprintf(
+                 '<label><input type="checkbox" class="tt-bg-checkbox" value="%s" checked> %s</label>',
+                 esc_attr($bg_slug),
+                 esc_html($bg)
+             );
+         }
+         $html .= '</div></div>';
 
         // Switcher
         $html .= '
@@ -178,53 +184,70 @@ class TimetableFrontendView {
         return $map[$date->format('N')];
     }
 
-  // Und die getInlineJs Methode:
-		private function getInlineJs(): string {
-			return '<script>
-			document.addEventListener("DOMContentLoaded", function() {
-				// Filter-Logik
-				document.addEventListener("change", function(e) {
-					const filter = e.target.closest(".tt-bg-filter");
-					if (!filter) return;
+private function getInlineJs(): string {
+    return '<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        
+        // 1. Multi-Filter Logik
+        document.addEventListener("change", function(e) {
+            const checkbox = e.target.closest(".tt-bg-checkbox, .tt-select-all");
+            if (!checkbox) return;
 
-					const wrapper = filter.closest(".mh-tt-frontend-wrapper");
-					const val = filter.value.trim();
+            const wrapper = checkbox.closest(".mh-tt-frontend-wrapper");
+            const allCheckboxes = wrapper.querySelectorAll(".tt-bg-checkbox");
+            const selectAllCheckbox = wrapper.querySelector(".tt-select-all");
+            
+            // --- Logik für "Alle auswählen" ---
+            if (checkbox.classList.contains("tt-select-all")) {
+                allCheckboxes.forEach(cb => cb.checked = checkbox.checked);
+            } else {
+                // 🟢 FIX: Prüfen, ob "Alle auswählen" deaktiviert werden muss
+                const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = allChecked;
+                }
+            }
 
-					// Alle filterbaren Elemente suchen
-					wrapper.querySelectorAll("[data-bg]").forEach(el => {
-						const bgValue = el.dataset.bg.trim();
-						if (val === "" || bgValue === val) {
-							el.classList.remove("tt-hidden");
-						} else {
-							el.classList.add("tt-hidden");
-						}
-					});
+            // Aktive Bildungsgänge sammeln
+            const checkedBoxes = wrapper.querySelectorAll(".tt-bg-checkbox:checked");
+            const selectedValues = Array.from(checkedBoxes).map(cb => cb.value.trim());
 
-					// Divider in der Liste fixen
-					wrapper.querySelectorAll(".tt-list-date-divider").forEach(div => {
-						let hasVisible = false;
-						let next = div.nextElementSibling;
-						while(next && next.classList.contains("tt-list-card")) {
-							if(!next.classList.contains("tt-hidden")) { hasVisible = true; break; }
-							next = next.nextElementSibling;
-						}
-						if(hasVisible) div.classList.remove("tt-hidden");
-						else div.classList.add("tt-hidden");
-					});
-				});
+            // Alle Elemente mit [data-bg] filtern
+            wrapper.querySelectorAll("[data-bg]").forEach(el => {
+                const bgValue = el.dataset.bg.trim();
+                if (selectedValues.includes(bgValue)) {
+                    el.classList.remove("tt-hidden");
+                } else {
+                    el.classList.add("tt-hidden");
+                }
+            });
 
-				// Switcher-Logik (unverändert)
-				document.addEventListener("click", function(e) {
-					const btn = e.target.closest(".tt-switch-btn");
-					if (!btn) return;
-					const wrapper = btn.closest(".mh-tt-frontend-wrapper");
-					wrapper.querySelectorAll(".tt-switch-btn").forEach(b => b.classList.remove("active"));
-					btn.classList.add("active");
-					wrapper.querySelectorAll(".tt-view-container").forEach(c => c.style.display = "none");
-					const target = document.getElementById(btn.dataset.view);
-					if (target) target.style.display = "block";
-				});
-			});
-			</script>';
-		}
+            // Divider in der Liste fixen
+            wrapper.querySelectorAll(".tt-list-date-divider").forEach(div => {
+                let hasVisible = false;
+                let next = div.nextElementSibling;
+                while(next && next.classList.contains("tt-list-card")) {
+                    if(!next.classList.contains("tt-hidden")) { hasVisible = true; break; }
+                    next = next.nextElementSibling;
+                }
+                if(hasVisible) div.classList.remove("tt-hidden");
+                else div.classList.add("tt-hidden");
+            });
+        });
+              // 2. Switcher-Logik (Umschalten GANTT / Liste / Monat)
+              document.addEventListener("click", function(e) {
+                  const btn = e.target.closest(".tt-switch-btn");
+                  if (!btn) return;
+
+                  const wrapper = btn.closest(".mh-tt-frontend-wrapper");
+                  wrapper.querySelectorAll(".tt-switch-btn").forEach(b => b.classList.remove("active"));
+                  btn.classList.add("active");
+
+                  wrapper.querySelectorAll(".tt-view-container").forEach(c => c.style.display = "none");
+                  const target = document.getElementById(btn.dataset.view);
+                  if (target) target.style.display = "block";
+              });
+          });
+          </script>';
+      }
 }

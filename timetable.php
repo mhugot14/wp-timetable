@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Timetable Schulverwaltung
- * Version: 0.6.0
+ * Version: 0.6.1
  * Author: Michael Hugot
  */
 

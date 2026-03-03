@@ -356,3 +356,42 @@
 .tt-hidden {
     display: none !important;
 }
+
+.tt-multiselect-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    background: #fff;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    max-height: 150px; /* Falls es sehr viele Bildungsgänge sind */
+    overflow-y: auto;
+    margin-top: 5px;
+}
+
+.tt-multiselect-container label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    background: #f0f0f0;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.tt-multiselect-container label:hover {
+    background: #e0e0e0;
+}
+
+.tt-select-all-label {
+    background: #002a55 !important;
+    color: #fff !important;
+    border-radius: 3px;
+}
+
+.tt-filter-box {
+    flex: 1; /* Nimmt den verfügbaren Platz ein */
+}
