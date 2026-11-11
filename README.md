@@ -51,6 +51,7 @@ Wer Bearbeitungsrechte hat, sieht über dem Plan den Knopf **Bearbeiten**. Im
 Bearbeiten-Modus sind die eigenen Termine gestrichelt umrandet:
 
 - Termin anklicken (GANTT, Liste oder Monat) → Dialog zum Ändern oder Löschen
+- Termin im GANTT seitlich ziehen → verschiebt ihn tageweise (Speichern beim Loslassen)
 - „+“ neben einem Bildungsgang oder „+ Neuer Termin“ → Termin anlegen
 - Nach dem Speichern zeigt der Dialog mitverschobene Termine (Fristen) und
   Hinweise (Wochenende, Ferien, Überschneidungen) an, danach lädt die Seite neu.

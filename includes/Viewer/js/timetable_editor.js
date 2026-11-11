@@ -176,6 +176,120 @@
             .catch((err) => meldung(dialog, 'fehler', [err.message]));
     });
 
+    // --- Drag & Drop im GANTT: Termin horizontal verschieben ------------------
+    // Einrasten auf ganze Tage; Speichern über dieselbe REST-Route wie der Dialog.
+    const WOCHENTAGE = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+    function plusTage(iso, tage) {
+        const [j, m, t] = iso.split('-').map(Number);
+        const d = new Date(Date.UTC(j, m - 1, t + tage)); // UTC: keine Probleme mit Sommerzeit
+        return d.toISOString().slice(0, 10);
+    }
+    function anzeige(iso) {
+        const [j, m, t] = iso.split('-').map(Number);
+        const d = new Date(Date.UTC(j, m - 1, t));
+        return WOCHENTAGE[d.getUTCDay()] + ' ' + String(t).padStart(2, '0') + '.' + String(m).padStart(2, '0') + '.';
+    }
+
+    let drag = null;
+    let klickUnterdruecken = false;
+    let infoBox = null;
+
+    function dragZuruecksetzen() {
+        if (!drag) return;
+        drag.bar.classList.remove('tt-dragging');
+        drag.bar.style.left = '';
+        if (infoBox) infoBox.hidden = true;
+        drag = null;
+    }
+
+    document.addEventListener('pointerdown', (e) => {
+        const bar = e.target.closest('td.tt-bar.tt-editierbar[data-beginn]');
+        if (!bar || e.button !== 0) return;
+        const wrapper = wrapperVon(bar);
+        if (!wrapper || !wrapper.classList.contains('tt-edit-mode')) return;
+        const spalten = parseInt(bar.getAttribute('colspan') || '1', 10);
+        drag = {
+            bar, wrapper,
+            startX: e.clientX,
+            tagBreite: bar.getBoundingClientRect().width / spalten,
+            tage: 0,
+            aktiv: false,
+            pointerId: e.pointerId
+        };
+    });
+
+    document.addEventListener('pointermove', (e) => {
+        if (!drag || e.pointerId !== drag.pointerId) return;
+        const dx = e.clientX - drag.startX;
+        if (!drag.aktiv) {
+            if (Math.abs(dx) < 6) return;          // kleiner Wackler = Klick
+            drag.aktiv = true;
+            drag.bar.classList.add('tt-dragging');
+            try { drag.bar.setPointerCapture(e.pointerId); } catch (err) { /* egal */ }
+        }
+        e.preventDefault();
+        drag.tage = Math.round(dx / drag.tagBreite);
+        drag.bar.style.left = (drag.tage * drag.tagBreite) + 'px';
+
+        if (!infoBox) {
+            infoBox = document.createElement('div');
+            infoBox.className = 'tt-drag-info';
+            document.body.appendChild(infoBox);
+        }
+        const b = plusTage(drag.bar.dataset.beginn, drag.tage);
+        const en = plusTage(drag.bar.dataset.ende, drag.tage);
+        infoBox.textContent = anzeige(b) + (b !== en ? ' – ' + anzeige(en) : '')
+            + (drag.tage ? '  (' + (drag.tage > 0 ? '+' : '') + drag.tage + ' Tag' + (Math.abs(drag.tage) === 1 ? '' : 'e') + ')' : '');
+        infoBox.style.left = (e.clientX + 14) + 'px';
+        infoBox.style.top = (e.clientY + 14) + 'px';
+        infoBox.hidden = false;
+    });
+
+    document.addEventListener('pointerup', (e) => {
+        if (!drag || e.pointerId !== drag.pointerId) return;
+        if (!drag.aktiv) { drag = null; return; }   // war ein Klick → Dialog öffnet der click-Handler
+
+        klickUnterdruecken = true;                   // folgenden click nicht als „Dialog öffnen“ werten
+        const { bar, wrapper, tage } = drag;
+        if (tage === 0) { dragZuruecksetzen(); return; }
+
+        const daten = {
+            beginn: plusTage(bar.dataset.beginn, tage),
+            ende: plusTage(bar.dataset.ende, tage)
+        };
+        if (infoBox) infoBox.textContent = 'Speichern …';
+        api('PUT', 'termine/' + bar.dataset.terminId, daten)
+            .then((res) => {
+                const info = (res.hinweise && res.hinweise.info) || [];
+                const warn = (res.hinweise && res.hinweise.warning) || [];
+                if (!info.length && !warn.length) { neuLaden(); return; }
+                // Hinweise im Dialog zeigen; „OK“ lädt neu
+                dragZuruecksetzen();
+                oeffneDialog(wrapper, res.termin);
+                const dialog = wrapper.querySelector('.tt-edit-dialog');
+                const zeilen = ['Verschoben und gespeichert.'];
+                if (info.length) zeilen.push('Mitverschoben:', ...info);
+                if (warn.length) zeilen.push('Bitte prüfen:', ...warn);
+                meldung(dialog, warn.length ? 'warnung' : 'info', zeilen);
+                dialog.dataset.fertig = '1';
+                dialog.querySelector('.tt-edit-speichern').textContent = 'OK';
+            })
+            .catch((err) => {
+                dragZuruecksetzen();
+                window.alert('Nicht verschoben: ' + err.message + (err.details && err.details.length ? '\n' + err.details.join('\n') : ''));
+            });
+    });
+
+    document.addEventListener('pointercancel', dragZuruecksetzen);
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && drag) dragZuruecksetzen(); });
+
+    // Klick direkt nach einem Drag nicht als „Dialog öffnen“ werten
+    document.addEventListener('click', (e) => {
+        if (!klickUnterdruecken) return;
+        klickUnterdruecken = false;
+        if (e.target.closest('.tt-editierbar')) { e.stopPropagation(); e.preventDefault(); }
+    }, true);
+
     // Abbrechen (bzw. nach Hinweisen: schließen und neu laden)
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('.tt-edit-abbrechen');

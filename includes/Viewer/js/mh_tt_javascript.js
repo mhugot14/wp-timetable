@@ -13,6 +13,54 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Escape schließt offene Dialoge
+    document.addEventListener('keydown', function(e) {
+        if (e.key !== 'Escape') return;
+        document.querySelectorAll('.mh-tt-modal').forEach(m => { if (m.style.display !== 'none') m.style.display = 'none'; });
+    });
+
+    // --- 1b. GENERISCHE DIALOGE (Bildungsgänge, Ereignistypen, Ferien, Fristen) ---
+    // Button: data-mh-modal="<id>" data-werte='{"feld":"wert"}' data-titel="…"
+    function oeffneGenerischenDialog(btn) {
+        const modal = document.getElementById(btn.dataset.mhModal);
+        if (!modal) return;
+        const form = modal.querySelector('form');
+        form.reset();
+        let werte = {};
+        try { werte = JSON.parse(btn.dataset.werte || '{}'); } catch (err) { /* leer lassen */ }
+
+        Object.keys(werte).forEach(function(name) {
+            const feld = form.elements[name] || form.elements[name + '[]'];
+            if (!feld) return;
+            const wert = werte[name];
+            if (feld.type === 'checkbox') {
+                feld.checked = !!wert;
+            } else if (feld.multiple) {
+                const liste = (Array.isArray(wert) ? wert : [wert]).map(String);
+                Array.from(feld.options).forEach(o => { o.selected = liste.includes(o.value); });
+            } else {
+                feld.value = wert === null || wert === undefined ? '' : wert;
+            }
+        });
+
+        const titel = modal.querySelector('.mh-tt-modal-titel');
+        if (titel && btn.dataset.titel) titel.textContent = btn.dataset.titel;
+        modal.style.display = 'flex';
+        const erstes = form.querySelector('input:not([type=hidden]), select, textarea');
+        if (erstes) erstes.focus();
+    }
+
+    document.addEventListener('click', function(e) {
+        const btn = e.target.closest('[data-mh-modal]');
+        if (!btn) return;
+        e.preventDefault();
+        oeffneGenerischenDialog(btn);
+    });
+
+    // Nach einem Validierungsfehler den betroffenen Dialog wieder öffnen
+    const auto = document.querySelector('[data-mh-auto="1"]');
+    if (auto) oeffneGenerischenDialog(auto);
+
     // --- 2. TERMIN LOGIK (Wird nur ausgeführt, wenn Termin-Elemente existieren) ---
     const terminModal = document.getElementById('mh-tt-modal');
     const terminForm = document.getElementById('mh-tt-termin-form');

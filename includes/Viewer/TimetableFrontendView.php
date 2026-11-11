@@ -30,13 +30,16 @@ class TimetableFrontendView {
      * @var array{bildungsgaenge?: string[], ereignistypen?: array<string,string>}
      */
     private array $editor;
+    /** @var array<string,string> Ereignistyp-Kürzel → Bezeichnung (Legende) */
+    private array $bezeichnungen;
 
-    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = [], array $farben = [], array $editor = []) {
+    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = [], array $farben = [], array $editor = [], array $bezeichnungen = []) {
         $this->timetable = $timetable;
         $this->entwurf = $entwurf;
         $this->ferien = $ferien;
         $this->farben = $farben;
         $this->editor = $editor;
+        $this->bezeichnungen = $bezeichnungen;
     }
 
     private function istEditor(): bool {
@@ -93,7 +96,7 @@ class TimetableFrontendView {
 
         if ($this->istEditor()) {
             $html .= '<div class="tt-edit-bar">'
-                . '<span><span class="dashicons dashicons-info-outline"></span> Bearbeiten-Modus: Termin anklicken zum Ändern, „+“ legt einen Termin im Bildungsgang an.</span>'
+                . '<span><span class="dashicons dashicons-info-outline"></span> Bearbeiten-Modus: Termin anklicken zum Ändern, im GANTT seitlich ziehen zum Verschieben, „+“ legt einen Termin an.</span>'
                 . '<button type="button" class="tt-add-btn button" data-bg="">+ Neuer Termin</button>'
                 . '</div>';
         }
@@ -126,12 +129,15 @@ class TimetableFrontendView {
         $typen = array_unique(array_map(fn(Termin $t) => $t->getEreignistyp(), $this->timetable->getTermine()));
         if (!$typen) return '';
         sort($typen, SORT_NATURAL | SORT_FLAG_CASE);
-        $html = '<div class="tt-legende" aria-label="Legende">';
+        $html = '<div class="tt-legende" aria-label="Legende der Ereignistypen"><span class="tt-legende-titel">Legende:</span>';
         foreach ($typen as $typ) {
+            $erklaerung = trim($this->bezeichnungen[$typ] ?? '');
             $html .= sprintf(
-                '<span class="tt-legende-eintrag"><span class="tt-legende-farbe" style="background:%s"></span>%s</span>',
+                '<span class="tt-legende-eintrag"><span class="tt-legende-farbe" style="background:%s"></span><strong>%s</strong>%s</span>',
                 esc_attr($this->farben[$typ] ?? '#cccccc'),
-                esc_html($typ)
+                esc_html($typ),
+                // Erklärung nur zeigen, wenn sie mehr sagt als das Kürzel
+                ($erklaerung !== '' && mb_strtolower($erklaerung) !== mb_strtolower($typ)) ? ' = ' . esc_html($erklaerung) : ''
             );
         }
         return $html . '</div>';
@@ -259,7 +265,9 @@ class TimetableFrontendView {
                             $editierbar ? ' tt-editierbar' : '',
                             esc_attr($title),
                             (int)$termin->getId(),
-                            $editierbar ? ' tabindex="0" role="button"' : '',
+                            // Daten für Drag & Drop (nur bei bearbeitbaren Balken)
+                            $editierbar ? sprintf(' tabindex="0" role="button" data-beginn="%s" data-ende="%s"',
+                                $termin->getBeginn()->format('Y-m-d'), $termin->getEnde()->format('Y-m-d')) : '',
                             $label
                         );
                         $idx += $dauer;

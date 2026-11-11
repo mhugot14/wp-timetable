@@ -611,3 +611,37 @@
     min-width: 0 !important;
     max-width: none !important;
 }
+
+/* Legende: Titel und Erklärtexte */
+.tt-legende-titel {
+    font-weight: 600;
+    margin-right: 4px;
+}
+.tt-legende-eintrag strong {
+    font-weight: 600;
+}
+
+/* Drag & Drop im GANTT (Bearbeiten-Modus) */
+.tt-edit-mode td.tt-bar.tt-editierbar[data-beginn] {
+    cursor: grab;
+    touch-action: none;           /* auf Touch-Geräten ziehen statt scrollen */
+    user-select: none;
+}
+.tt-edit-mode td.tt-bar.tt-dragging {
+    cursor: grabbing;
+    position: relative;           /* left wird per JS gesetzt */
+    z-index: 50;
+    opacity: .85;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .35);
+}
+.tt-drag-info {
+    position: fixed;
+    z-index: 100000;
+    padding: 4px 8px;
+    background: #1d2327;
+    color: #fff;
+    font-size: 12px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
+}

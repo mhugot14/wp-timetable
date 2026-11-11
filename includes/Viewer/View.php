@@ -62,6 +62,7 @@ class View {
 
     private function initHooks(): void {
         add_action('admin_menu', [$this, 'createMenu']);
+        add_action('admin_menu', [$this, 'createMenuEinstellungen'], 30);
         add_action('admin_enqueue_scripts', [$this, 'adminJavascript']);
         add_action('admin_enqueue_scripts', [$this, 'customAdminStyles']);
         add_action('admin_notices', [$this, 'renderAdminNotices']);
@@ -89,6 +90,10 @@ class View {
     public function createMenu(): void {
         add_menu_page('Timetable', 'Timetables', self::CAPABILITY, 'mh-timetable', [$this, 'renderTimetablePage'], 'dashicons-clock', 30);
         add_submenu_page('mh-timetable', 'Termine', 'Termine', self::CAPABILITY, 'termine', [$this, 'renderTerminePage']);
+    }
+
+    /** Einstellungen als letzter Menüpunkt (nach Bildungsgänge/Ereignistypen). */
+    public function createMenuEinstellungen(): void {
         add_submenu_page('mh-timetable', 'Einstellungen', 'Einstellungen', self::CAPABILITY, 'Einstellungen', [$this, 'renderEinstellungen']);
     }
 
@@ -117,16 +122,22 @@ class View {
 
     public function renderEinstellungen(): void {
         echo '<div class="wrap"><h1>Einstellungen</h1>';
-        echo '<h2>Stammdaten</h2><ul><li><a href="' . esc_url(admin_url('admin.php?page=mh-tt-bildungsgaenge')) . '" class="button">Bildungsgänge verwalten</a></li> ';
-        echo '<li><a href="' . esc_url(admin_url('admin.php?page=mh-tt-ereignistypen')) . '" class="button">Ereignistypen verwalten</a></li></ul>';
-        echo '<h2>Ferien & Feiertage</h2>';
-        $this->renderFerienForm();
+
+        // --- Ferien & Feiertage ---
+        echo '<h2 class="wp-heading-inline">Ferien &amp; Feiertage</h2> ';
+        echo AdminModal::button('mh-tt-ferien-modal', '+ Ferien/Feiertag', ['typ' => 'Ferien'], 'Ferien oder Feiertag hinzufügen');
+        echo ' ' . AdminModal::button('mh-tt-import-modal', 'Per API importieren', ['jahr' => (int)date('Y'), 'bundesland' => 'NW'], 'Ferien & Feiertage per API importieren');
+        echo '<p class="description">Werden für Konfliktwarnungen, Fristen (Schultage) und das Kopieren von Timetables genutzt.</p>';
         $ferienTable = new \MH\Timetable\Viewer\ListTable\FerienListTable($this->ferienController);
         $ferienTable->prepare_items();
         echo '<form method="post">'; $ferienTable->display(); echo '</form>';
-        $this->renderFerienImportForm();
+
+        // --- Abhängige Fristen ---
         $this->renderFristen();
         echo '</div>';
+
+        $this->renderFerienForm();
+        $this->renderFerienImportForm();
     }
 
     // --- Abhängige Fristen ---
@@ -134,9 +145,9 @@ class View {
     {
         $regeln = $this->fristenService->getRegeln();
         $typen = $this->stammdaten->getEreignistypen();
-        $postUrl = esc_url(admin_url('admin-post.php'));
         ?>
-        <h2 id="fristen">Abhängige Fristen</h2>
+        <h2 id="fristen" class="wp-heading-inline" style="margin-top:2em;">Abhängige Fristen</h2>
+        <?php echo AdminModal::button('mh-tt-frist-modal', '+ Neue Regel', ['richtung' => 'vor', 'abstand' => 1], 'Neue Fristen-Regel'); ?>
         <p>Regeln zwischen Ereignistypen, jeweils innerhalb derselben Timetable und desselben Bildungsgangs.
            Wird der Bezugstermin verschoben, wandern die abhängigen Termine mit (Abstand in Schultagen bleibt,
            unterschreitet aber nie den Mindestabstand). Verstöße erscheinen als Hinweis in der Terminliste.</p>
@@ -156,34 +167,17 @@ class View {
             <?php endforeach; ?>
             </tbody>
         </table>
-
-        <div class="postbox" style="padding: 20px; margin-top: 20px; max-width:900px;">
-            <h3>Neue Regel</h3>
-            <form method="post" action="<?php echo $postUrl; ?>">
-                <input type="hidden" name="action" value="mh_tt_save_frist">
-                <?php wp_nonce_field('mh_tt_frist_action', 'mh_tt_frist_nonce'); ?>
-                <p>
-                    <select name="abhaengig_id" required>
-                        <option value="">– Ereignistyp –</option>
-                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->getId(), esc_html($t->getKuerzel())); ?>
-                    </select>
-                    <select name="richtung">
-                        <option value="vor">endet spätestens</option>
-                        <option value="nach">beginnt frühestens</option>
-                    </select>
-                    <input type="number" name="abstand" value="1" min="0" max="60" style="width:70px;" required> Schultag(e)
-                    <span class="mh-tt-richtung-text">vor Beginn / nach Ende von</span>
-                    <select name="bezug_id" required>
-                        <option value="">– Ereignistyp –</option>
-                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->getId(), esc_html($t->getKuerzel())); ?>
-                    </select>
-                </p>
-                <p class="description">Beispiele: „NE endet spätestens 3 Schultage vor Beginn von ZK“ · „ZA beginnt frühestens 1 Schultag nach Ende von ZK“.
-                    Abstand 0 = am selben Tag.</p>
-                <p><button type="submit" class="button button-primary">Regel anlegen</button></p>
-            </form>
-        </div>
         <?php
+        $optionen = '';
+        foreach ($typen as $t) {
+            $optionen .= sprintf('<option value="%d">%s</option>', $t->getId(), esc_html($t->getAnzeigename()));
+        }
+        echo AdminModal::start('mh-tt-frist-modal', 'Neue Fristen-Regel', 'mh_tt_save_frist', 'mh_tt_frist_action', 'mh_tt_frist_nonce', false);
+        echo AdminModal::zeile('Ereignistyp', '<select name="abhaengig_id" required><option value="">– wählen –</option>' . $optionen . '</select>', 'der abhängige Termin, z. B. NE');
+        echo AdminModal::zeile('Regel', '<select name="richtung"><option value="vor">endet spätestens … vor Beginn von</option><option value="nach">beginnt frühestens … nach Ende von</option></select>');
+        echo AdminModal::zeile('Abstand', '<input type="number" name="abstand" value="1" min="0" max="60" style="width:80px;" required> Schultag(e)', '0 = am selben Tag');
+        echo AdminModal::zeile('Bezug', '<select name="bezug_id" required><option value="">– wählen –</option>' . $optionen . '</select>', 'der Bezugstermin, z. B. ZK');
+        echo AdminModal::ende('Regel anlegen', '<p class="description">Beispiele: „NE endet spätestens 3 Schultage vor Beginn von ZK“ · „ZA beginnt frühestens 1 Schultag nach Ende von ZK“.</p>');
     }
 
     public function handleSaveFrist(): void
@@ -517,7 +511,8 @@ class View {
             $istEntwurf ? 'ja' : 'nein',
             $ferienMap,
             $this->stammdaten->getFarbMap(),
-            $this->editorKonfiguration()
+            $this->editorKonfiguration(),
+            $this->stammdaten->getBezeichnungMap()
         );
         return $frontendView->render();
     }
@@ -552,39 +547,12 @@ class View {
     // --- Ferien ---
 	private function renderFerienForm(): void
     {
-        ?>
-        <div class="postbox" style="padding: 20px; margin-bottom: 20px;">
-            <h3>Neue Ferien/Feiertag manuell hinzufügen</h3>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="mh_tt_save_ferien">
-                <?php wp_nonce_field('mh_tt_ferien_action', 'mh_tt_ferien_nonce'); ?>
-
-                <table class="form-table">
-                    <tr>
-                        <th><label>Name</label></th>
-                        <td><input type="text" name="name" class="regular-text" required></td>
-                    </tr>
-                    <tr>
-                        <th><label>Zeitraum</label></th>
-                        <td>
-                            Von: <input type="date" name="startdatum" required>
-                            Bis: <input type="date" name="enddatum" required>
-                        </td>
-                    </tr>
-                    <tr>
-                        <th><label>Typ</label></th>
-                        <td>
-                            <select name="typ">
-                                <option value="Ferien">Ferien</option>
-                                <option value="Feiertag">Feiertag</option>
-                            </select>
-                        </td>
-                    </tr>
-                </table>
-                <p><button type="submit" class="button button-primary">Speichern</button></p>
-            </form>
-        </div>
-        <?php
+        echo AdminModal::start('mh-tt-ferien-modal', 'Ferien oder Feiertag hinzufügen', 'mh_tt_save_ferien', 'mh_tt_ferien_action', 'mh_tt_ferien_nonce', false);
+        echo AdminModal::zeile('Name', '<input type="text" id="ferien_name" name="name" class="regular-text" required>', 'z. B. „Osterferien“ oder „Pfingstmontag“', 'ferien_name');
+        echo AdminModal::zeile('Von', '<input type="date" id="ferien_von" name="startdatum" required>', '', 'ferien_von');
+        echo AdminModal::zeile('Bis', '<input type="date" id="ferien_bis" name="enddatum" required>', 'bei einem einzelnen Feiertag gleich „Von“', 'ferien_bis');
+        echo AdminModal::zeile('Typ', '<select name="typ"><option value="Ferien">Ferien</option><option value="Feiertag">Feiertag</option></select>');
+        echo AdminModal::ende();
     }
 
 	private function renderFerienImportForm(): void
@@ -597,30 +565,15 @@ class View {
             "RP" => "Rheinland-Pfalz", "SL" => "Saarland", "SN" => "Sachsen",
             "ST" => "Sachsen-Anhalt", "SH" => "Schleswig-Holstein", "TH" => "Thüringen"
         ];
-        ?>
-        <div class="postbox" style="padding: 20px; margin-top: 20px;">
-            <h3>Ferien & Feiertage per API importieren</h3>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="mh_tt_import_ferien">
-                <?php wp_nonce_field('mh_tt_import_action', 'mh_tt_import_nonce'); ?>
+        $jahre = '';
+        foreach ($years as $year) $jahre .= sprintf('<option value="%d">%d</option>', $year, $year);
+        $laender = '';
+        foreach ($bundeslaender as $code => $name) $laender .= sprintf('<option value="%s">%s</option>', esc_attr($code), esc_html($name));
 
-                <table class="form-table">
-                    <tr>
-                        <th><label>Jahr & Bundesland</label></th>
-                        <td>
-                            <select name="jahr">
-                                <?php foreach ($years as $year) printf('<option value="%d">%d</option>', $year, $year); ?>
-                            </select>
-                            <select name="bundesland">
-                                <?php foreach ($bundeslaender as $code => $name) printf('<option value="%s">%s</option>', esc_attr($code), esc_html($name)); ?>
-                            </select>
-                        </td>
-                    </tr>
-                </table>
-                <p><button type="submit" class="button">Daten jetzt abrufen</button></p>
-            </form>
-        </div>
-        <?php
+        echo AdminModal::start('mh-tt-import-modal', 'Ferien & Feiertage per API importieren', 'mh_tt_import_ferien', 'mh_tt_import_action', 'mh_tt_import_nonce', false);
+        echo AdminModal::zeile('Jahr', '<select name="jahr">' . $jahre . '</select>');
+        echo AdminModal::zeile('Bundesland', '<select name="bundesland">' . $laender . '</select>', 'Quelle: ferien-api.de und feiertage-api.de. Bereits vorhandene Einträge werden übersprungen.');
+        echo AdminModal::ende('Daten jetzt abrufen');
     }
 
 	public function handleSaveFerien(): void

@@ -50,57 +50,28 @@ class StammdatenAdmin
         $repo = $this->stammdaten->bildungsgaenge();
         $alle = $repo->getAll();
         $anzahl = $repo->countTermine();
-        $bearbeiten = isset($_GET['edit']) ? $repo->find((int)$_GET['edit']) : null;
+        $autoId = (int)($_GET['edit'] ?? 0);
         $users = $this->getUsers();
 
-        echo '<div class="wrap"><h1 class="wp-heading-inline">Bildungsgänge</h1>';
-        if ($bearbeiten) {
-            printf(' <a href="%s" class="page-title-action">+ Neuer Bildungsgang</a>', esc_url(admin_url('admin.php?page=' . self::PAGE_BG)));
+        echo '<div class="wrap"><h1 class="wp-heading-inline">Bildungsgänge</h1> ';
+        echo AdminModal::button('mh-tt-bg-modal', '+ Neuer Bildungsgang', ['aktiv' => true], 'Neuer Bildungsgang');
+        if (count($alle) > 1) {
+            echo ' ' . AdminModal::button('mh-tt-bg-merge', 'Zusammenführen', [], 'Bildungsgänge zusammenführen');
         }
         echo '<hr class="wp-header-end">';
-        echo '<p>Abteilungsleitung (AL) und Bildungsgangassistenzen (BGA) dürfen später die Termine ihrer Bildungsgänge bearbeiten.</p>';
-
-        // --- Formular ---
-        $bg = $bearbeiten ?? new Bildungsgang('');
+        echo '<p>Abteilungsleitung (AL) und Bildungsgangassistenzen (BGA) dürfen im Frontend die Termine ihrer Bildungsgänge bearbeiten.</p>';
         ?>
-        <div class="postbox" style="padding:12px 20px; max-width:900px;">
-            <h2><?php echo $bearbeiten ? 'Bildungsgang bearbeiten: ' . esc_html($bg->getKuerzel()) : 'Neuer Bildungsgang'; ?></h2>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="mh_tt_save_bildungsgang">
-                <input type="hidden" name="id" value="<?php echo (int)$bg->getId(); ?>">
-                <?php wp_nonce_field('mh_tt_bildungsgang', 'mh_tt_nonce'); ?>
-                <table class="form-table">
-                    <tr><th><label for="bg_kuerzel">Kürzel</label></th>
-                        <td><input type="text" id="bg_kuerzel" name="kuerzel" value="<?php echo esc_attr($bg->getKuerzel()); ?>" maxlength="<?php echo Schema::LEN_STAMM_KUERZEL; ?>" required class="regular-text">
-                            <p class="description">Wird in Terminen, Filtern und im GANTT angezeigt, z. B. „IFK“.</p></td></tr>
-                    <tr><th><label for="bg_bezeichnung">Bezeichnung</label></th>
-                        <td><input type="text" id="bg_bezeichnung" name="bezeichnung" value="<?php echo esc_attr($bg->getBezeichnung()); ?>" maxlength="<?php echo Schema::LEN_STAMM_BEZEICHNUNG; ?>" class="regular-text"> <span class="description">optional, Langform</span></td></tr>
-                    <tr><th><label for="bg_al">Abteilungsleitung</label></th>
-                        <td><select id="bg_al" name="al_user_id">
-                                <option value="0">– keine –</option>
-                                <?php foreach ($users as $u) printf('<option value="%d"%s>%s</option>', $u->ID, selected($bg->getAlUserId(), $u->ID, false), esc_html($u->display_name)); ?>
-                            </select></td></tr>
-                    <tr><th><label for="bg_bga">Bildungsgangassistenz</label></th>
-                        <td><select id="bg_bga" name="bga_user_ids[]" multiple size="8" style="min-width:300px;">
-                                <?php foreach ($users as $u) printf('<option value="%d"%s>%s</option>', $u->ID, in_array((int)$u->ID, $bg->getBgaUserIds(), true) ? ' selected' : '', esc_html($u->display_name)); ?>
-                            </select>
-                            <p class="description">Mehrere auswählen mit gedrückter Strg-Taste (Mac: ⌘).</p></td></tr>
-                    <tr><th>Status</th>
-                        <td><label><input type="checkbox" name="aktiv" value="1" <?php checked($bg->isAktiv()); ?>> aktiv</label>
-                            <p class="description">Inaktive Bildungsgänge stehen in Auswahllisten am Ende; bestehende Termine bleiben erhalten.</p></td></tr>
-                </table>
-                <p><button type="submit" class="button button-primary">Speichern</button>
-                    <?php if ($bearbeiten): ?><a href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_BG)); ?>" class="button">Abbrechen</a><?php endif; ?></p>
-            </form>
-        </div>
-
         <table class="widefat striped" style="max-width:1200px;">
             <thead><tr><th>Kürzel</th><th>Bezeichnung</th><th>Abteilungsleitung</th><th>Bildungsgangassistenz</th><th>Termine</th><th>Status</th><th>Aktionen</th></tr></thead>
             <tbody>
             <?php if (!$alle): ?><tr><td colspan="7"><em>Noch keine Bildungsgänge angelegt.</em></td></tr><?php endif; ?>
             <?php foreach ($alle as $eintrag):
                 $id = (int)$eintrag->getId();
-                $n = $anzahl[$id] ?? 0; ?>
+                $n = $anzahl[$id] ?? 0;
+                $werte = [
+                    'id' => $id, 'kuerzel' => $eintrag->getKuerzel(), 'bezeichnung' => $eintrag->getBezeichnung(),
+                    'al_user_id' => (int)$eintrag->getAlUserId(), 'bga_user_ids' => $eintrag->getBgaUserIds(), 'aktiv' => $eintrag->isAktiv(),
+                ]; ?>
                 <tr<?php echo $eintrag->isAktiv() ? '' : ' style="opacity:.6"'; ?>>
                     <td><strong><?php echo esc_html($eintrag->getKuerzel()); ?></strong></td>
                     <td><?php echo esc_html($eintrag->getBezeichnung()); ?></td>
@@ -109,7 +80,7 @@ class StammdatenAdmin
                     <td><?php echo $n; ?></td>
                     <td><?php echo $eintrag->isAktiv() ? 'aktiv' : 'inaktiv'; ?></td>
                     <td>
-                        <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_BG . '&edit=' . $id)); ?>">Bearbeiten</a>
+                        <?php echo AdminModal::button('mh-tt-bg-modal', 'Bearbeiten', $werte, 'Bildungsgang bearbeiten: ' . $eintrag->getKuerzel(), 'button', $autoId === $id); ?>
                         <?php if ($n === 0): ?>
                             <a class="button" onclick="return confirm('Bildungsgang wirklich löschen?')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_bildungsgang&id=' . $id), 'mh_tt_delete_bg_' . $id)); ?>">Löschen</a>
                         <?php endif; ?>
@@ -119,9 +90,25 @@ class StammdatenAdmin
             </tbody>
         </table>
         <?php
-        $this->renderMergeForm('bildungsgang', 'Bildungsgänge zusammenführen', $alle, $anzahl,
-            'Alle Termine der Quelle werden dem Ziel zugeordnet, die Quelle wird gelöscht. AL und BGA der Quelle werden beim Ziel ergänzt (die AL der Quelle wird BGA, falls das Ziel schon eine AL hat) – so behalten alle ihre Bearbeitungsrechte.');
         echo '</div>';
+
+        // --- Dialog: Anlegen/Bearbeiten ---
+        $alOptionen = '<option value="0">– keine –</option>';
+        $bgaOptionen = '';
+        foreach ($users as $u) {
+            $alOptionen .= sprintf('<option value="%d">%s</option>', $u->ID, esc_html($u->display_name));
+            $bgaOptionen .= sprintf('<option value="%d">%s</option>', $u->ID, esc_html($u->display_name));
+        }
+        echo AdminModal::start('mh-tt-bg-modal', 'Bildungsgang', 'mh_tt_save_bildungsgang', 'mh_tt_bildungsgang', 'mh_tt_nonce');
+        echo AdminModal::zeile('Kürzel', sprintf('<input type="text" id="bg_kuerzel" name="kuerzel" maxlength="%d" required class="regular-text">', Schema::LEN_STAMM_KUERZEL), 'Wird in Terminen, Filtern und im GANTT angezeigt, z. B. „IFK“.', 'bg_kuerzel');
+        echo AdminModal::zeile('Bezeichnung', sprintf('<input type="text" id="bg_bezeichnung" name="bezeichnung" maxlength="%d" class="regular-text">', Schema::LEN_STAMM_BEZEICHNUNG), 'optional, Langform', 'bg_bezeichnung');
+        echo AdminModal::zeile('Abteilungsleitung', '<select id="bg_al" name="al_user_id">' . $alOptionen . '</select>', '', 'bg_al');
+        echo AdminModal::zeile('Bildungsgangassistenz', '<select id="bg_bga" name="bga_user_ids[]" multiple size="8" style="min-width:280px;">' . $bgaOptionen . '</select>', 'Mehrere auswählen mit gedrückter Strg-Taste (Mac: ⌘).', 'bg_bga');
+        echo AdminModal::zeile('Status', '<label><input type="checkbox" name="aktiv" value="1"> aktiv</label>', 'Inaktive Bildungsgänge stehen in Auswahllisten am Ende und sind im Frontend nicht bearbeitbar; bestehende Termine bleiben erhalten.');
+        echo AdminModal::ende();
+
+        $this->renderMergeForm('bildungsgang', 'mh-tt-bg-merge', 'Bildungsgänge zusammenführen', $alle, $anzahl,
+            'Alle Termine der Quelle werden dem Ziel zugeordnet, die Quelle wird gelöscht. AL und BGA der Quelle werden beim Ziel ergänzt (die AL der Quelle wird BGA, falls das Ziel schon eine AL hat) – so behalten alle ihre Bearbeitungsrechte.');
     }
 
     public function handleSaveBildungsgang(): void
@@ -194,42 +181,22 @@ class StammdatenAdmin
         $repo = $this->stammdaten->ereignistypen();
         $alle = $repo->getAll();
         $anzahl = $repo->countTermine();
-        $bearbeiten = isset($_GET['edit']) ? $repo->find((int)$_GET['edit']) : null;
-        $et = $bearbeiten ?? new Ereignistyp('');
+        $autoId = (int)($_GET['edit'] ?? 0);
 
-        echo '<div class="wrap"><h1 class="wp-heading-inline">Ereignistypen</h1>';
-        if ($bearbeiten) {
-            printf(' <a href="%s" class="page-title-action">+ Neuer Ereignistyp</a>', esc_url(admin_url('admin.php?page=' . self::PAGE_ET)));
+        echo '<div class="wrap"><h1 class="wp-heading-inline">Ereignistypen</h1> ';
+        echo AdminModal::button('mh-tt-et-modal', '+ Neuer Ereignistyp', ['aktiv' => true, 'farbe' => '#cccccc'], 'Neuer Ereignistyp');
+        if (count($alle) > 1) {
+            echo ' ' . AdminModal::button('mh-tt-et-merge', 'Zusammenführen', [], 'Ereignistypen zusammenführen');
         }
         echo '<hr class="wp-header-end">';
         ?>
-        <div class="postbox" style="padding:12px 20px; max-width:900px;">
-            <h2><?php echo $bearbeiten ? 'Ereignistyp bearbeiten: ' . esc_html($et->getKuerzel()) : 'Neuer Ereignistyp'; ?></h2>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
-                <input type="hidden" name="action" value="mh_tt_save_ereignistyp">
-                <input type="hidden" name="id" value="<?php echo (int)$et->getId(); ?>">
-                <?php wp_nonce_field('mh_tt_ereignistyp', 'mh_tt_nonce'); ?>
-                <table class="form-table">
-                    <tr><th><label for="et_kuerzel">Kürzel</label></th>
-                        <td><input type="text" id="et_kuerzel" name="kuerzel" value="<?php echo esc_attr($et->getKuerzel()); ?>" maxlength="<?php echo Schema::LEN_STAMM_KUERZEL; ?>" required class="regular-text"></td></tr>
-                    <tr><th><label for="et_bezeichnung">Bezeichnung</label></th>
-                        <td><input type="text" id="et_bezeichnung" name="bezeichnung" value="<?php echo esc_attr($et->getBezeichnung()); ?>" maxlength="<?php echo Schema::LEN_STAMM_BEZEICHNUNG; ?>" class="regular-text"> <span class="description">z. B. „Zeugniskonferenz“</span></td></tr>
-                    <tr><th><label for="et_farbe">Farbe</label></th>
-                        <td><input type="color" id="et_farbe" name="farbe" value="<?php echo esc_attr($et->getFarbe()); ?>"> <span class="description">für GANTT, Liste und Monatsansicht</span></td></tr>
-                    <tr><th>Status</th>
-                        <td><label><input type="checkbox" name="aktiv" value="1" <?php checked($et->isAktiv()); ?>> aktiv</label></td></tr>
-                </table>
-                <p><button type="submit" class="button button-primary">Speichern</button>
-                    <?php if ($bearbeiten): ?><a href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_ET)); ?>" class="button">Abbrechen</a><?php endif; ?></p>
-            </form>
-        </div>
-
         <table class="widefat striped" style="max-width:1000px;">
             <thead><tr><th style="width:40px;">Farbe</th><th>Kürzel</th><th>Bezeichnung</th><th>Termine</th><th>Status</th><th>Aktionen</th></tr></thead>
             <tbody>
             <?php foreach ($alle as $eintrag):
                 $id = (int)$eintrag->getId();
-                $n = $anzahl[$id] ?? 0; ?>
+                $n = $anzahl[$id] ?? 0;
+                $werte = ['id' => $id, 'kuerzel' => $eintrag->getKuerzel(), 'bezeichnung' => $eintrag->getBezeichnung(), 'farbe' => $eintrag->getFarbe(), 'aktiv' => $eintrag->isAktiv()]; ?>
                 <tr<?php echo $eintrag->isAktiv() ? '' : ' style="opacity:.6"'; ?>>
                     <td><span style="display:inline-block; width:24px; height:24px; border-radius:4px; background:<?php echo esc_attr($eintrag->getFarbe()); ?>"></span></td>
                     <td><strong><?php echo esc_html($eintrag->getKuerzel()); ?></strong></td>
@@ -237,7 +204,7 @@ class StammdatenAdmin
                     <td><?php echo $n; ?></td>
                     <td><?php echo $eintrag->isAktiv() ? 'aktiv' : 'inaktiv'; ?></td>
                     <td>
-                        <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=' . self::PAGE_ET . '&edit=' . $id)); ?>">Bearbeiten</a>
+                        <?php echo AdminModal::button('mh-tt-et-modal', 'Bearbeiten', $werte, 'Ereignistyp bearbeiten: ' . $eintrag->getKuerzel(), 'button', $autoId === $id); ?>
                         <?php if ($n === 0): ?>
                             <a class="button" onclick="return confirm('Ereignistyp wirklich löschen? Fristen-Regeln mit diesem Typ werden ebenfalls gelöscht.')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_ereignistyp&id=' . $id), 'mh_tt_delete_et_' . $id)); ?>">Löschen</a>
                         <?php endif; ?>
@@ -247,9 +214,17 @@ class StammdatenAdmin
             </tbody>
         </table>
         <?php
-        $this->renderMergeForm('ereignistyp', 'Ereignistypen zusammenführen', $alle, $anzahl,
-            'Alle Termine der Quelle erhalten den Ziel-Typ, die Quelle wird gelöscht. Fristen-Regeln werden auf den Ziel-Typ umgestellt. Beispiel: „Zeugniskonferenz“ in „ZK“ zusammenführen.');
         echo '</div>';
+
+        echo AdminModal::start('mh-tt-et-modal', 'Ereignistyp', 'mh_tt_save_ereignistyp', 'mh_tt_ereignistyp', 'mh_tt_nonce');
+        echo AdminModal::zeile('Kürzel', sprintf('<input type="text" id="et_kuerzel" name="kuerzel" maxlength="%d" required class="regular-text">', Schema::LEN_STAMM_KUERZEL), 'Kurzform für GANTT und Filter, z. B. „ZK“.', 'et_kuerzel');
+        echo AdminModal::zeile('Bezeichnung', sprintf('<input type="text" id="et_bezeichnung" name="bezeichnung" maxlength="%d" class="regular-text">', Schema::LEN_STAMM_BEZEICHNUNG), 'Erklärung, z. B. „Zeugniskonferenz“ – erscheint in der Legende im Frontend.', 'et_bezeichnung');
+        echo AdminModal::zeile('Farbe', '<input type="color" id="et_farbe" name="farbe" value="#cccccc">', 'für GANTT, Liste und Monatsansicht', 'et_farbe');
+        echo AdminModal::zeile('Status', '<label><input type="checkbox" name="aktiv" value="1"> aktiv</label>');
+        echo AdminModal::ende();
+
+        $this->renderMergeForm('ereignistyp', 'mh-tt-et-merge', 'Ereignistypen zusammenführen', $alle, $anzahl,
+            'Alle Termine der Quelle erhalten den Ziel-Typ, die Quelle wird gelöscht. Fristen-Regeln werden auf den Ziel-Typ umgestellt. Beispiel: „Zeugniskonferenz“ in „ZK“ zusammenführen.');
     }
 
     public function handleSaveEreignistyp(): void
@@ -323,31 +298,21 @@ class StammdatenAdmin
     // =====================================================================
 
     /**
+     * Dialog „Zusammenführen“ (Quelle → Ziel).
      * @param Bildungsgang[]|Ereignistyp[] $eintraege
      * @param array<int,int> $anzahl
      */
-    private function renderMergeForm(string $art, string $titel, array $eintraege, array $anzahl, string $hinweis): void
+    private function renderMergeForm(string $art, string $modalId, string $titel, array $eintraege, array $anzahl, string $hinweis): void
     {
         if (count($eintraege) < 2) return;
         $optionen = '';
         foreach ($eintraege as $e) {
             $optionen .= sprintf('<option value="%d">%s (%d Termine)</option>', $e->getId(), esc_html($e->getKuerzel()), $anzahl[(int)$e->getId()] ?? 0);
         }
-        ?>
-        <div class="postbox" style="padding:12px 20px; margin-top:20px; max-width:900px;">
-            <h2><?php echo esc_html($titel); ?></h2>
-            <p><?php echo esc_html($hinweis); ?></p>
-            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
-                  onsubmit="return confirm('Wirklich zusammenführen? Die Quelle wird danach gelöscht.');">
-                <input type="hidden" name="action" value="mh_tt_merge_<?php echo esc_attr($art); ?>">
-                <?php wp_nonce_field('mh_tt_merge_' . $art, 'mh_tt_nonce'); ?>
-                <select name="quelle" required><option value="">– Quelle –</option><?php echo $optionen; ?></select>
-                &nbsp;zusammenführen in&nbsp;
-                <select name="ziel" required><option value="">– Ziel –</option><?php echo $optionen; ?></select>
-                <button type="submit" class="button">Zusammenführen</button>
-            </form>
-        </div>
-        <?php
+        echo AdminModal::start($modalId, $titel, 'mh_tt_merge_' . $art, 'mh_tt_merge_' . $art, 'mh_tt_nonce', false);
+        echo AdminModal::zeile('Quelle', '<select name="quelle" required><option value="">– Quelle –</option>' . $optionen . '</select>', 'wird danach gelöscht');
+        echo AdminModal::zeile('Ziel', '<select name="ziel" required><option value="">– Ziel –</option>' . $optionen . '</select>', 'bleibt erhalten');
+        echo AdminModal::ende('Zusammenführen', '<p class="description" style="max-width:520px;">' . esc_html($hinweis) . '</p>');
     }
 
     /** @return string[] Fehlermeldungen */

@@ -157,6 +157,26 @@ class TermineListTable extends WP_List_Table
         }
     }
 
+    /** Leere Liste: aktive Filter nennen, damit klar ist, warum nichts erscheint. */
+    public function no_items(): void
+    {
+        $f = $this->getFilters(get_current_user_id());
+        $teile = [];
+        if ($f['timetable'] !== '') {
+            $teile[] = sprintf('Timetable „%s“', $this->timetableNames[(int)$f['timetable']] ?? $f['timetable']);
+        }
+        if ($f['bildungsgang'] !== '') $teile[] = sprintf('Bildungsgang „%s“', $f['bildungsgang']);
+        if ($f['ereignistyp'] !== '')  $teile[] = sprintf('Ereignistyp „%s“', $f['ereignistyp']);
+        if ($f['nur_hinweise'] === '1') $teile[] = 'nur mit Hinweisen';
+
+        if (!$teile) {
+            echo 'Es gibt noch keine Termine.';
+            return;
+        }
+        echo esc_html('Keine Termine für diese Filterkombination: ' . implode(', ', $teile) . '. ');
+        echo 'Mit <strong>Reset</strong> werden alle Filter zurückgesetzt.';
+    }
+
     public function column_hinweise($item): string
     {
         $liste = $this->hinweise[(int)$item->getId()] ?? [];

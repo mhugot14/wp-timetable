@@ -42,6 +42,16 @@ class StammdatenService
         return $map;
     }
 
+    /** @return array<string,string> Ereignistyp-Kürzel → Bezeichnung (für Legende/Tooltips) */
+    public function getBezeichnungMap(): array
+    {
+        $map = [];
+        foreach ($this->ereignistypen->getAll() as $et) {
+            $map[$et->getKuerzel()] = $et->getBezeichnung();
+        }
+        return $map;
+    }
+
     /** Farbklassen td_<slug> für das GANTT (Frontend und Backend). */
     public function generateDynamicCss(): void
     {
