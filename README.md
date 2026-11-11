@@ -51,7 +51,7 @@ Wer Bearbeitungsrechte hat, sieht über dem Plan den Knopf **Bearbeiten**. Im
 Bearbeiten-Modus sind die eigenen Termine gestrichelt umrandet:
 
 - Termin anklicken (GANTT, Liste oder Monat) → Dialog zum Ändern oder Löschen
-- Termin im GANTT seitlich ziehen → verschiebt ihn tageweise (Speichern beim Loslassen)
+- Termin im Zeitplan oder GANTT seitlich ziehen → verschiebt ihn tageweise (Speichern beim Loslassen)
 - „+“ neben einem Bildungsgang oder „+ Neuer Termin“ → Termin anlegen
 - Nach dem Speichern zeigt der Dialog mitverschobene Termine (Fristen) und
   Hinweise (Wochenende, Ferien, Überschneidungen) an, danach lädt die Seite neu.
@@ -85,6 +85,21 @@ Mitverschiebungen, `warning` = Konflikte). Fehler: 400 (ungültig, mit
 |---|---|
 | `id` | ID der Timetable (den fertigen Shortcode zeigt die Spalte *Shortcode* unter *Timetables*) |
 | `entwurf` | veraltet – besser den **Status** der Timetable auf *Entwurf* setzen. `ja` wirkt weiterhin wie der Status *Entwurf*. |
+| `ansichten` | optional: wählbare Ansichten für diese Seite, z. B. `zeitplan,liste` (überschreibt die Einstellung) |
+| `standard` | optional: Ansicht beim Öffnen, z. B. `liste` |
+
+## Ansichten im Frontend
+
+| Ansicht | Inhalt |
+|---|---|
+| **Zeitplan** | Neu gedachte Zeitleiste: ausgeschriebene Ereignistypen am Balken, Stichtage als Raute, Zeiträume als Balken, Monat/Kalenderwoche/Tag, Ferienbänder, Heute-Linie (springt beim Öffnen zu heute), Langname des Bildungsgangs |
+| **GANTT** | Klassisches Tagesraster mit Kürzeln |
+| **Liste** | Chronologische Karten – gut auf dem Handy |
+| **Monat** | Kalenderblätter je Monat |
+
+Unter *Einstellungen → Ansichten im Frontend* wird festgelegt, welche Ansichten
+wählbar sind und welche beim Öffnen erscheint (Standard: alle, Zeitplan zuerst).
+Ist nur eine Ansicht aktiv, entfallen die Umschalt-Knöpfe.
 
 ## Status: Entwurf / Veröffentlicht
 

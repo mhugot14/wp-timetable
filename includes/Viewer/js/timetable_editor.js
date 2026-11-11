@@ -194,24 +194,40 @@
     let klickUnterdruecken = false;
     let infoBox = null;
 
+    // Tabellenzellen (GANTT) werden per left verschoben, absolut positionierte
+    // Balken (Zeitplan) per transform – sonst würde ihr left überschrieben.
+    function versetze(bar, px) {
+        if (bar.tagName === 'TD') bar.style.left = px ? px + 'px' : '';
+        else bar.style.transform = px ? 'translateX(' + px + 'px)' : '';
+    }
+
     function dragZuruecksetzen() {
         if (!drag) return;
         drag.bar.classList.remove('tt-dragging');
-        drag.bar.style.left = '';
+        versetze(drag.bar, 0);
         if (infoBox) infoBox.hidden = true;
         drag = null;
     }
 
+    function tageZwischen(von, bis) {
+        const a = von.split('-').map(Number), b = bis.split('-').map(Number);
+        return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000) + 1;
+    }
+
     document.addEventListener('pointerdown', (e) => {
-        const bar = e.target.closest('td.tt-bar.tt-editierbar[data-beginn]');
+        const bar = e.target.closest('.tt-bar.tt-editierbar[data-beginn]');
         if (!bar || e.button !== 0) return;
         const wrapper = wrapperVon(bar);
         if (!wrapper || !wrapper.classList.contains('tt-edit-mode')) return;
-        const spalten = parseInt(bar.getAttribute('colspan') || '1', 10);
+        // Breite eines Tages: Balkenbreite / Anzahl sichtbarer Tage (Zeitplan: per CSS-Variable)
+        const zp = bar.closest('.tt-zp');
+        const tagBreite = zp
+            ? (parseFloat(getComputedStyle(zp).getPropertyValue('--tt-tag')) || 28)
+            : bar.getBoundingClientRect().width / parseInt(bar.getAttribute('colspan') || String(tageZwischen(bar.dataset.beginn, bar.dataset.ende)), 10);
         drag = {
             bar, wrapper,
             startX: e.clientX,
-            tagBreite: bar.getBoundingClientRect().width / spalten,
+            tagBreite,
             tage: 0,
             aktiv: false,
             pointerId: e.pointerId
@@ -229,7 +245,7 @@
         }
         e.preventDefault();
         drag.tage = Math.round(dx / drag.tagBreite);
-        drag.bar.style.left = (drag.tage * drag.tagBreite) + 'px';
+        versetze(drag.bar, drag.tage * drag.tagBreite);
 
         if (!infoBox) {
             infoBox = document.createElement('div');

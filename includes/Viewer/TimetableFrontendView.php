@@ -20,6 +20,14 @@ use DateTime;
 class TimetableFrontendView {
     private const MONATE = [1 => 'Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
+    /** Verfügbare Ansichten in der Reihenfolge der Umschalt-Knöpfe: Schlüssel → [Beschriftung, Dashicon] */
+    public const ANSICHTEN = [
+        'zeitplan' => ['Zeitplan', 'dashicons-schedule'],
+        'gantt'    => ['GANTT', 'dashicons-chart-bar'],
+        'liste'    => ['Liste', 'dashicons-list-view'],
+        'monat'    => ['Monat', 'dashicons-calendar-alt'],
+    ];
+
     private Timetable $timetable;
     private string $entwurf;
     private array $ferien;
@@ -32,14 +40,27 @@ class TimetableFrontendView {
     private array $editor;
     /** @var array<string,string> Ereignistyp-Kürzel → Bezeichnung (Legende) */
     private array $bezeichnungen;
+    /** @var string[] aktivierte Ansichten (Schlüssel aus ANSICHTEN) */
+    private array $ansichten;
+    private string $standardAnsicht;
+    /** @var array<string,string> Bildungsgang-Kürzel → Bezeichnung */
+    private array $bgNamen;
 
-    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = [], array $farben = [], array $editor = [], array $bezeichnungen = []) {
+    /**
+     * @param array{ansichten?: string[], standard?: string, bg_bezeichnungen?: array<string,string>} $optionen
+     */
+    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = [], array $farben = [], array $editor = [], array $bezeichnungen = [], array $optionen = []) {
         $this->timetable = $timetable;
         $this->entwurf = $entwurf;
         $this->ferien = $ferien;
         $this->farben = $farben;
         $this->editor = $editor;
         $this->bezeichnungen = $bezeichnungen;
+        $this->bgNamen = $optionen['bg_bezeichnungen'] ?? [];
+        $aktiv = array_values(array_intersect(array_keys(self::ANSICHTEN), $optionen['ansichten'] ?? array_keys(self::ANSICHTEN)));
+        $this->ansichten = $aktiv ?: array_keys(self::ANSICHTEN);
+        $standard = $optionen['standard'] ?? $this->ansichten[0];
+        $this->standardAnsicht = in_array($standard, $this->ansichten, true) ? $standard : $this->ansichten[0];
     }
 
     private function istEditor(): bool {
@@ -69,10 +90,17 @@ class TimetableFrontendView {
         }
         $html .= '</div></div>';
 
-        $html .= '<div class="tt-view-switcher">'
-            . '<button type="button" class="tt-switch-btn active" data-view="tt-view-gantt-' . $uid . '"><span class="dashicons dashicons-chart-bar"></span> GANTT</button>'
-            . '<button type="button" class="tt-switch-btn" data-view="tt-view-list-' . $uid . '"><span class="dashicons dashicons-list-view"></span> Liste</button>'
-            . '<button type="button" class="tt-switch-btn" data-view="tt-view-month-' . $uid . '"><span class="dashicons dashicons-calendar-alt"></span> Monat</button>';
+        $html .= '<div class="tt-view-switcher">';
+        // Umschalt-Knöpfe nur, wenn es mehr als eine Ansicht gibt
+        if (count($this->ansichten) > 1) {
+            foreach ($this->ansichten as $key) {
+                [$label, $icon] = self::ANSICHTEN[$key];
+                $html .= sprintf(
+                    '<button type="button" class="tt-switch-btn%s" data-view="tt-view-%s-%d" aria-pressed="%s"><span class="dashicons %s"></span> %s</button>',
+                    $key === $this->standardAnsicht ? ' active' : '', $key, $uid, $key === $this->standardAnsicht ? 'true' : 'false', $icon, esc_html($label)
+                );
+            }
+        }
         if ($this->istEditor()) {
             $html .= '<button type="button" class="tt-edit-toggle" aria-pressed="false"><span class="dashicons dashicons-edit"></span> Bearbeiten</button>';
         }
@@ -93,7 +121,7 @@ class TimetableFrontendView {
             $html .= sprintf(
                 '<p class="tt-abo-hinweis"><span class="dashicons dashicons-calendar-alt"></span> '
                 . '<a href="%s">Alle Termine im Kalender abonnieren</a> · <a href="%s">als .ics herunterladen</a>'
-                . ' <small>(Abo: Outlook, Apple- und Google-Kalender übernehmen Änderungen automatisch. Einzelne Bildungsgänge: Links in der GANTT-Ansicht.)</small></p>',
+                . ' <small>(Abo: Outlook, Apple- und Google-Kalender übernehmen Änderungen automatisch. Einzelne Bildungsgänge: Links neben dem Bildungsgang.)</small></p>',
                 esc_url(IcalService::buildUrl($uid, '', true)),
                 esc_url(IcalService::buildUrl($uid))
             );
@@ -101,7 +129,7 @@ class TimetableFrontendView {
 
         if ($this->istEditor()) {
             $html .= '<div class="tt-edit-bar">'
-                . '<span><span class="dashicons dashicons-info-outline"></span> Bearbeiten-Modus: Termin anklicken zum Ändern, im GANTT seitlich ziehen zum Verschieben, „+“ legt einen Termin an.</span>'
+                . '<span><span class="dashicons dashicons-info-outline"></span> Bearbeiten-Modus: Termin anklicken zum Ändern, im Zeitplan/GANTT seitlich ziehen zum Verschieben, „+“ legt einen Termin an.</span>'
                 . '<button type="button" class="tt-add-btn button" data-bg="">+ Neuer Termin</button>'
                 . '</div>';
         }
@@ -110,13 +138,14 @@ class TimetableFrontendView {
 
         // 3. Ansichten
         if (!empty($termine)) {
-            $html .= '<div id="tt-view-gantt-' . $uid . '" class="tt-view-container">' . $this->generiereGantt() . '</div>';
-
-            $listView = new ListFrontendView($this->timetable, $this->ferien, $this->farben, $this->editor['bildungsgaenge'] ?? []);
-            $html .= '<div id="tt-view-list-' . $uid . '" class="tt-view-container" style="display:none;">' . $listView->render() . '</div>';
-
-            $monthView = new MonthFrontendView($this->timetable, $this->ferien, $this->farben, $this->editor['bildungsgaenge'] ?? []);
-            $html .= '<div id="tt-view-month-' . $uid . '" class="tt-view-container" style="display:none;">' . $monthView->render() . '</div>';
+            foreach ($this->ansichten as $key) {
+                $html .= sprintf(
+                    '<div id="tt-view-%s-%d" class="tt-view-container tt-view-%s"%s>%s</div>',
+                    $key, $uid, $key,
+                    $key === $this->standardAnsicht ? '' : ' style="display:none;"',
+                    $this->renderAnsicht($key)
+                );
+            }
         } else {
             $html .= '<p class="tt-leer">Noch keine Termine – im Bearbeiten-Modus über „+ Neuer Termin“ anlegen.</p>';
         }
@@ -127,6 +156,21 @@ class TimetableFrontendView {
 
         $html .= '</div>'; // Ende wrapper
         return $html;
+    }
+
+    private function renderAnsicht(string $key): string {
+        $bgs = $this->editor['bildungsgaenge'] ?? [];
+        switch ($key) {
+            case 'zeitplan':
+                return (new ZeitplanFrontendView($this->timetable, $this->ferien, $this->farben, $this->bezeichnungen, $this->bgNamen, $bgs, $this->entwurf === 'ja'))->render();
+            case 'gantt':
+                return $this->generiereGantt();
+            case 'liste':
+                return (new ListFrontendView($this->timetable, $this->ferien, $this->farben, $bgs))->render();
+            case 'monat':
+                return (new MonthFrontendView($this->timetable, $this->ferien, $this->farben, $bgs))->render();
+        }
+        return '';
     }
 
     /** Legende der in dieser Timetable verwendeten Ereignistypen. */

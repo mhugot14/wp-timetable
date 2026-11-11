@@ -52,6 +52,16 @@ class StammdatenService
         return $map;
     }
 
+    /** @return array<string,string> Bildungsgang-Kürzel → Bezeichnung */
+    public function getBildungsgangBezeichnungMap(): array
+    {
+        $map = [];
+        foreach ($this->bildungsgaenge->getAll() as $bg) {
+            $map[$bg->getKuerzel()] = $bg->getBezeichnung();
+        }
+        return $map;
+    }
+
     /** Farbklassen td_<slug> für das GANTT (Frontend und Backend). */
     public function generateDynamicCss(): void
     {

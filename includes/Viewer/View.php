@@ -14,6 +14,7 @@ use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\FristenService;
 use MH\Timetable\Service\KonfliktService;
 use MH\Timetable\Service\Berechtigungen;
+use MH\Timetable\Service\AnsichtenEinstellungen;
 use MH\Timetable\Install\Schema;
 use MH\Timetable\Model\Entity\Timetable;
 
@@ -80,6 +81,7 @@ class View {
         add_action('admin_post_mh_tt_save_ferien', [$this, 'handleSaveFerien']);
         add_action('admin_post_mh_tt_import_ferien', [$this, 'handleImportFerien']);
         add_action('admin_post_mh_tt_save_frist', [$this, 'handleSaveFrist']);
+        add_action('admin_post_mh_tt_save_ansichten', [$this, 'handleSaveAnsichten']);
         add_action('admin_post_mh_tt_delete_frist', [$this, 'handleDeleteFrist']);
 
         if (isset($_GET['action']) && $_GET['action'] === 'delete_ferien') {
@@ -122,6 +124,8 @@ class View {
 
     public function renderEinstellungen(): void {
         echo '<div class="wrap"><h1>Einstellungen</h1>';
+
+        $this->renderAnsichtenEinstellungen();
 
         // --- Ferien & Feiertage ---
         echo '<h2 class="wp-heading-inline">Ferien &amp; Feiertage</h2> ';
@@ -178,6 +182,51 @@ class View {
         echo AdminModal::zeile('Abstand', '<input type="number" name="abstand" value="1" min="0" max="60" style="width:80px;" required> Schultag(e)', '0 = am selben Tag');
         echo AdminModal::zeile('Bezug', '<select name="bezug_id" required><option value="">– wählen –</option>' . $optionen . '</select>', 'der Bezugstermin, z. B. ZK');
         echo AdminModal::ende('Regel anlegen', '<p class="description">Beispiele: „NE endet spätestens 3 Schultage vor Beginn von ZK“ · „ZA beginnt frühestens 1 Schultag nach Ende von ZK“.</p>');
+    }
+
+    /** Einstellung: welche Frontend-Ansichten wählbar sind und welche zuerst erscheint. */
+    private function renderAnsichtenEinstellungen(): void
+    {
+        $cfg = AnsichtenEinstellungen::global();
+        $beschreibung = [
+            'zeitplan' => 'neu: lesbare Beschriftung, Stichtage als Raute, Ferienbänder, Kalenderwochen',
+            'gantt'    => 'klassisches Raster mit Kürzeln',
+            'liste'    => 'chronologische Karten, gut für Handy',
+            'monat'    => 'Kalenderblätter je Monat',
+        ];
+        ?>
+        <h2>Ansichten im Frontend</h2>
+        <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" class="mh-tt-ansichten-form">
+            <input type="hidden" name="action" value="mh_tt_save_ansichten">
+            <?php wp_nonce_field('mh_tt_ansichten', 'mh_tt_ansichten_nonce'); ?>
+            <table class="widefat striped" style="max-width:900px;">
+                <thead><tr><th style="width:90px;">wählbar</th><th style="width:110px;">Standard</th><th>Ansicht</th></tr></thead>
+                <tbody>
+                <?php foreach (TimetableFrontendView::ANSICHTEN as $key => [$label, $icon]): ?>
+                    <tr>
+                        <td><input type="checkbox" name="aktiv[]" value="<?php echo esc_attr($key); ?>" id="ans_<?php echo esc_attr($key); ?>" <?php checked(in_array($key, $cfg['aktiv'], true)); ?>></td>
+                        <td><input type="radio" name="standard" value="<?php echo esc_attr($key); ?>" <?php checked($cfg['standard'], $key); ?> aria-label="<?php echo esc_attr($label . ' als Standard'); ?>"></td>
+                        <td><label for="ans_<?php echo esc_attr($key); ?>"><span class="dashicons <?php echo esc_attr($icon); ?>"></span> <strong><?php echo esc_html($label); ?></strong> – <?php echo esc_html($beschreibung[$key]); ?></label></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+            <p class="description">Gilt für alle Timetables. Einzelne Seiten können das im Shortcode überschreiben, z. B. <code>[insertTimetable id="12" ansichten="zeitplan,liste" standard="liste"]</code>.</p>
+            <p><button type="submit" class="button button-primary">Ansichten speichern</button></p>
+        </form>
+        <?php
+    }
+
+    public function handleSaveAnsichten(): void
+    {
+        $this->requireCapability();
+        check_admin_referer('mh_tt_ansichten', 'mh_tt_ansichten_nonce');
+        $fehler = AnsichtenEinstellungen::speichern(
+            array_map('sanitize_key', (array)($_POST['aktiv'] ?? [])),
+            sanitize_key($_POST['standard'] ?? '')
+        );
+        $this->addNotice($fehler ? 'error' : 'success', [$fehler ?? 'Die Ansichten wurden gespeichert.']);
+        $this->redirectTo('Einstellungen');
     }
 
     public function handleSaveFrist(): void
@@ -497,7 +546,7 @@ class View {
     // --- Shortcode ---
     public function setupShortcodes(): void { add_shortcode('insertTimetable', [$this, 'shortcodeInsertTimetable']); }
     public function shortcodeInsertTimetable($atts, string $content = ''): string {
-        $atts = shortcode_atts(['id' => 0, 'entwurf' => 'nein'], $atts); $id = (int)$atts['id'];
+        $atts = shortcode_atts(['id' => 0, 'entwurf' => 'nein', 'ansichten' => '', 'standard' => ''], $atts); $id = (int)$atts['id'];
         $timetable = $this->timetableRepository->find($id); if (!$timetable) return '<p>Nicht gefunden.</p>';
         $termine = $this->termineRepository->getByTimetableId($id); $timetable->setTermine($termine);
         $alleFerien = $this->ferienRepository->getAll(); $ferienMap = [];
@@ -512,7 +561,11 @@ class View {
             $ferienMap,
             $this->stammdaten->getFarbMap(),
             $this->editorKonfiguration(),
-            $this->stammdaten->getBezeichnungMap()
+            $this->stammdaten->getBezeichnungMap(),
+            (function () use ($atts) {
+                $a = AnsichtenEinstellungen::fuerShortcode((string)$atts['ansichten'], (string)$atts['standard']);
+                return ['ansichten' => $a['aktiv'], 'standard' => $a['standard'], 'bg_bezeichnungen' => $this->stammdaten->getBildungsgangBezeichnungMap()];
+            })()
         );
         return $frontendView->render();
     }

@@ -681,3 +681,273 @@
     pointer-events: none;
     white-space: nowrap;
 }
+
+/* =====================================================================
+   Zeitplan (seit 0.10.0) – neu gedachte GANTT-Ansicht
+   Maße kommen als CSS-Variablen aus PHP: --tt-tag, --tt-spur, --tt-label
+   ===================================================================== */
+.tt-zp {
+    --tt-linie: #e3e6ea;
+    --tt-kopf: #002a55;
+    --tt-kopf-hell: #e8eef5;
+    --tt-ferien: #fff4cc;
+    --tt-wochenende: #f4f5f7;
+    border: 1px solid #d0d5dc;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.3;
+}
+.tt-zp-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+.tt-zp-inner {
+    position: relative;
+}
+
+/* Kopf */
+.tt-zp-kopf {
+    display: flex;
+    border-bottom: 2px solid var(--tt-kopf);
+    background: #fff;
+}
+.tt-zp-ecke {
+    position: sticky;
+    left: 0;
+    z-index: 6;
+    flex: 0 0 var(--tt-label);
+    display: flex;
+    align-items: flex-end;
+    padding: 0 12px 8px;
+    background: var(--tt-kopf);
+    color: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.tt-zp-skala {
+    position: relative;
+    flex: 0 0 auto;
+}
+.tt-zp-reihe {
+    position: relative;
+}
+.tt-zp-reihe-monat { height: 26px; background: var(--tt-kopf); }
+.tt-zp-reihe-woche { height: 22px; background: var(--tt-kopf-hell); border-bottom: 1px solid var(--tt-linie); }
+.tt-zp-reihe-tag   { height: 34px; }
+.tt-zp-monat {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-left: 1px solid rgba(255, 255, 255, .35);
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+}
+.tt-zp-monat span {
+    position: sticky;            /* Monatsname bleibt beim Scrollen sichtbar */
+    left: calc(var(--tt-label) + 8px);
+    display: inline-block;
+    padding: 5px 8px;
+}
+.tt-zp-woche {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    padding: 3px 6px;
+    border-left: 1px solid #c7d3e0;
+    color: #3c5a78;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.tt-zp-ferienband {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    z-index: 1;
+    border-radius: 4px;
+    background: #f5d76e;
+    color: #5c4500;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tt-zp-ferienband span { display: block; padding: 2px 6px; overflow: hidden; text-overflow: ellipsis; }
+.tt-zp-tag {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--tt-tag);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #1d2327;
+}
+.tt-zp-tag span { font-size: 10px; font-weight: 400; color: #6b7480; }
+.tt-zp-tag.is-wochenende { color: #9aa1aa; }
+.tt-zp-tag.is-ferien { background: var(--tt-ferien); }
+.tt-zp-tag.is-heute {
+    background: #d63638;
+    color: #fff;
+    border-radius: 6px;
+}
+.tt-zp-tag.is-heute span { color: #fff; }
+
+/* Körper */
+.tt-zp-body {
+    position: relative;
+}
+.tt-zp-raster {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--tt-label);
+    pointer-events: none;
+}
+.tt-zp-raster-tag {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: var(--tt-tag);
+}
+.tt-zp-raster-tag.is-wochenende { background: var(--tt-wochenende); }
+.tt-zp-raster-tag.is-ferien { background: var(--tt-ferien); }
+.tt-zp-raster-tag.is-wochenstart { border-left: 1px solid var(--tt-linie); }
+.tt-zp-heute {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    margin-left: -1px;
+    background: #d63638;
+    z-index: 4;
+}
+.tt-zp-heute span {
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #d63638;
+    white-space: nowrap;
+}
+
+.tt-zp-zeile {
+    position: relative;
+    display: flex;
+    border-bottom: 1px solid var(--tt-linie);
+}
+.tt-zp-zeile:hover { background: rgba(0, 42, 85, .03); }
+.tt-zp-label {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    flex: 0 0 var(--tt-label);
+    box-sizing: border-box;
+    padding: 6px 12px;
+    background: #fff;
+    border-right: 1px solid #d0d5dc;
+    box-shadow: 4px 0 6px -4px rgba(0, 0, 0, .12);
+}
+.tt-zp-bg { font-weight: 700; color: #002a55; font-size: 14px; }
+.tt-zp-bg-lang {
+    font-size: 11px;
+    color: #6b7480;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tt-zp-links { font-size: 10px; margin-top: 2px; }
+.tt-zp-links a { color: #2271b1; text-decoration: none; }
+.tt-zp-links a:hover { text-decoration: underline; }
+.tt-zp-spur {
+    position: relative;
+    flex: 0 0 auto;
+}
+
+/* Balken (Zeitraum) und Rauten (Stichtag) */
+.tt-zp-balken {
+    position: absolute;
+    height: calc(var(--tt-spur) - 6px);
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    z-index: 2;
+    cursor: default;
+}
+.tt-zp-balken.is-zeitraum {
+    background: var(--tt-farbe);
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .18);
+}
+.tt-zp-balken.is-zeitraum.text-innen .tt-zp-text {
+    color: var(--tt-textfarbe);
+    padding: 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tt-zp-text {
+    white-space: nowrap;
+    font-size: 12px;
+}
+.tt-zp-text strong { font-weight: 600; }
+.tt-zp-neben { opacity: .85; }
+/* Text rechts neben dem Balken bzw. der Raute */
+.tt-zp-balken.text-aussen .tt-zp-text {
+    position: absolute;
+    left: calc(100% + 6px);
+    color: #1d2327;
+}
+.tt-zp-balken.text-aussen .tt-zp-neben { color: #50575e; opacity: 1; }
+.tt-zp-raute {
+    display: block;
+    width: 14px;
+    height: 14px;
+    margin: 0 auto;
+    background: var(--tt-farbe);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--tt-farbe), 0 1px 3px rgba(0, 0, 0, .3);
+    transform: rotate(45deg);
+}
+.tt-zp-balken:hover,
+.tt-zp-balken:focus {
+    z-index: 3;
+    filter: brightness(1.05);
+}
+
+/* Bearbeiten-Modus im Zeitplan */
+.tt-edit-mode .tt-zp-balken.tt-editierbar {
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+.tt-edit-mode .tt-zp-balken.tt-editierbar.is-zeitraum,
+.tt-edit-mode .tt-zp-balken.tt-editierbar .tt-zp-raute {
+    outline: 2px dashed rgba(153, 104, 0, .7);
+    outline-offset: 1px;
+}
+.tt-edit-mode .tt-zp-balken.tt-dragging {
+    cursor: grabbing;
+    z-index: 20;
+    opacity: .9;
+}
+/* Für den Zeitplan gilt das allgemeine outline der tt-editierbar-Regel nicht */
+.tt-edit-mode .tt-zp-balken.tt-editierbar.is-stichtag { outline: none; }
+
+/* Filter blendet ganze Zeilen aus */
+.tt-zp-zeile.tt-hidden { display: none; }
+
+@media print {
+    .tt-zp-scroll { overflow: visible; }
+    .tt-zp-label, .tt-zp-ecke { position: static; box-shadow: none; }
+}

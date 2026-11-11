@@ -48,11 +48,31 @@
 
         const wrapper = btn.closest('.mh-tt-frontend-wrapper');
         if (!wrapper) return;
-        wrapper.querySelectorAll('.tt-switch-btn').forEach(b => b.classList.remove('active'));
+        wrapper.querySelectorAll('.tt-switch-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
         btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
 
         wrapper.querySelectorAll('.tt-view-container').forEach(c => { c.style.display = 'none'; });
         const target = document.getElementById(btn.dataset.view);
-        if (target) target.style.display = 'block';
+        if (target) {
+            target.style.display = 'block';
+            zuHeuteScrollen(target);
+        }
     });
+
+    // 3. Zeitplan: beim ersten Anzeigen zum heutigen Tag scrollen
+    function zuHeuteScrollen(bereich) {
+        bereich.querySelectorAll('.tt-zp-scroll[data-heute-px]:not([data-gescrollt])').forEach(scroll => {
+            if (scroll.offsetParent === null) return;           // (noch) unsichtbar
+            const label = parseInt(getComputedStyle(scroll.closest('.tt-zp')).getPropertyValue('--tt-label'), 10) || 0;
+            const ziel = parseInt(scroll.dataset.heutePx, 10) - (scroll.clientWidth - label) / 3;
+            scroll.scrollLeft = Math.max(0, ziel);
+            scroll.dataset.gescrollt = '1';
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => zuHeuteScrollen(document));
+    } else {
+        zuHeuteScrollen(document);
+    }
 })();
