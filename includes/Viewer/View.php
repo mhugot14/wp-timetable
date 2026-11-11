@@ -13,6 +13,7 @@ use MH\Timetable\Service\StammdatenService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\FristenService;
 use MH\Timetable\Service\KonfliktService;
+use MH\Timetable\Service\Berechtigungen;
 use MH\Timetable\Install\Schema;
 use MH\Timetable\Model\Entity\Timetable;
 
@@ -30,6 +31,7 @@ class View {
     private IcalService $icalService;
     private FristenService $fristenService;
     private KonfliktService $konfliktService;
+    private Berechtigungen $berechtigungen;
 
     public function __construct(
         TerminController $terminController,
@@ -41,8 +43,10 @@ class View {
         StammdatenService $stammdaten,
         IcalService $icalService,
         FristenService $fristenService,
-        KonfliktService $konfliktService
+        KonfliktService $konfliktService,
+        Berechtigungen $berechtigungen
     ) {
+        $this->berechtigungen = $berechtigungen;
         $this->fristenService = $fristenService;
         $this->konfliktService = $konfliktService;
         $this->terminController = $terminController;
@@ -483,6 +487,9 @@ class View {
 			(string)$ver // Zwingt den Browser zum Neuladen bei jeder Änderung
 		);
 
+		// Editor-Script nur für Bearbeiter*innen (wird in editorKonfiguration() eingebunden)
+		wp_register_script('timetable-editor', MH_TT_URL . 'includes/Viewer/js/timetable_editor.js', ['timetable-frontend'], MH_TT_VERSION, true);
+
 		// Nur registrieren – eingebunden wird das Script erst, wenn der Shortcode rendert.
 		wp_register_script(
 			'timetable-frontend',
@@ -509,9 +516,37 @@ class View {
             $timetable,
             $istEntwurf ? 'ja' : 'nein',
             $ferienMap,
-            $this->stammdaten->getFarbMap()
+            $this->stammdaten->getFarbMap(),
+            $this->editorKonfiguration()
         );
         return $frontendView->render();
+    }
+
+    /**
+     * Bearbeiten im Frontend: welche Bildungsgänge darf die angemeldete Person
+     * bearbeiten? Bei Rechten wird zusätzlich das Editor-Script geladen.
+     * (Die REST-Schnittstelle prüft beim Speichern unabhängig davon erneut.)
+     */
+    private function editorKonfiguration(): array {
+        $userId = get_current_user_id();
+        $bgs = $this->berechtigungen->bearbeitbareBildungsgaenge($userId);
+        if (!$bgs) return [];
+
+        $ereignistypen = [];
+        foreach ($this->stammdaten->getEreignistypen() as $et) {
+            if ($et->isAktiv()) $ereignistypen[$et->getKuerzel()] = $et->getAnzeigename();
+        }
+
+        wp_enqueue_script('timetable-editor');
+        wp_localize_script('timetable-editor', 'mhTtEditor', [
+            'root'  => esc_url_raw(rest_url(\MH\Timetable\Controller\RestController::NS . '/')),
+            'nonce' => wp_create_nonce('wp_rest'),
+        ]);
+
+        return [
+            'bildungsgaenge' => array_map(fn($bg) => $bg->getKuerzel(), array_filter($bgs, fn($bg) => $bg->isAktiv())),
+            'ereignistypen'  => $ereignistypen,
+        ];
     }
 
     // --- Ferien ---

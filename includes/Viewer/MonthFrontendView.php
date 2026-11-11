@@ -14,11 +14,14 @@ class MonthFrontendView {
     private array $ferien;
     /** @var array<string,string> Ereignistyp-Name → Farbe */
     private array $farben;
+    /** @var string[] Bildungsgänge, die die aktuelle Person bearbeiten darf */
+    private array $editierbareBgs;
 
-    public function __construct(Timetable $timetable, array $ferien = [], array $farben = []) {
+    public function __construct(Timetable $timetable, array $ferien = [], array $farben = [], array $editierbareBgs = []) {
         $this->timetable = $timetable;
         $this->ferien = $ferien;
         $this->farben = $farben;
+        $this->editierbareBgs = $editierbareBgs;
     }
 
     public function render(): string {
@@ -101,7 +104,7 @@ class MonthFrontendView {
 
 				// DIESE ZEILE WURDE GEÄNDERT: data-bg hinzugefügt
 				$html .= sprintf(
-					'<div class="day-event-bar %s" style="background:%s" data-bg="%s" title="%s | %s: %s">',
+					'<div class="day-event-bar %s' . $this->editKlasse($termin) . '" style="background:%s" data-termin-id="' . (int)$termin->getId() . '" data-bg="%s" title="%s | %s: %s">',
 					$isStart ? 'has-title' : 'is-continuation',
 					$color,
 					esc_attr($termin->getBildungsgang()), // Der Anker für den JS-Filter
@@ -134,5 +137,11 @@ class MonthFrontendView {
     private function getGermanMonth(string $month): string {
         $map = ['January'=>'Januar','February'=>'Februar','March'=>'März','April'=>'April','May'=>'Mai','June'=>'Juni','July'=>'Juli','August'=>'August','September'=>'September','October'=>'Oktober','November'=>'November','December'=>'Dezember'];
         return $map[$month] ?? $month;
+    }
+
+    /** CSS-Klasse für anklickbare Termine im Bearbeiten-Modus */
+    private function editKlasse(\MH\Timetable\Model\Entity\Termin $termin): string
+    {
+        return in_array($termin->getBildungsgang(), $this->editierbareBgs, true) ? ' tt-editierbar' : '';
     }
 }

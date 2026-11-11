@@ -24,7 +24,54 @@ angelegt und migriert. Der Ordner `vendor/` wird nicht benötigt.
 |---|---|
 | **Timetables** | Zeittafeln anlegen, bearbeiten, löschen und mit Datumsverschiebung kopieren |
 | **Termine** | Termine anlegen/bearbeiten; Mehrfachänderung, Kopieren und Löschen über die Sammelaktionen; Filter nach Timetable, Bildungsgang und Ereignistyp |
-| **Einstellungen** | Bildungsgänge und Ereignistypen (inkl. Farbe) verwalten, Ferien und Feiertage manuell oder per API importieren |
+| **Bildungsgänge** | Kürzel, Bezeichnung, Abteilungsleitung, Bildungsgangassistenzen, aktiv/inaktiv; Dubletten zusammenführen |
+| **Ereignistypen** | Kürzel, Bezeichnung, Farbe, aktiv/inaktiv; Dubletten zusammenführen |
+| **Einstellungen** | Ferien und Feiertage (manuell oder per API), abhängige Fristen |
+
+## Rollen und Rechte
+
+| Rolle | Darf |
+|---|---|
+| **Admin** (`manage_options`) | alles, im Backend und im Frontend |
+| **Abteilungsleitung (AL)** | Termine *ihrer* Bildungsgänge im Frontend anlegen, ändern, löschen |
+| **Bildungsgangassistenz (BGA)** | wie AL, für die Bildungsgänge, denen sie zugeordnet ist |
+
+AL und BGA werden unter *Bildungsgänge* je Bildungsgang zugeordnet (eine AL,
+beliebig viele BGA). Eine Person kann in mehreren Bildungsgängen AL oder BGA sein.
+Bildungsgänge, Ereignistypen, Timetables, Status, Kopieren, Ferien und Fristen
+bleiben den Admins vorbehalten.
+
+Jede Änderung wird auf dem Server geprüft. Termine können nicht in fremde
+Bildungsgänge oder (außer durch Admins) in eine andere Timetable verschoben
+werden. Mitverschiebungen durch Fristen bleiben immer im selben Bildungsgang.
+
+## Bearbeiten im Frontend
+
+Wer Bearbeitungsrechte hat, sieht über dem Plan den Knopf **Bearbeiten**. Im
+Bearbeiten-Modus sind die eigenen Termine gestrichelt umrandet:
+
+- Termin anklicken (GANTT, Liste oder Monat) → Dialog zum Ändern oder Löschen
+- „+“ neben einem Bildungsgang oder „+ Neuer Termin“ → Termin anlegen
+- Nach dem Speichern zeigt der Dialog mitverschobene Termine (Fristen) und
+  Hinweise (Wochenende, Ferien, Überschneidungen) an, danach lädt die Seite neu.
+
+Der Modus bleibt beim Neuladen erhalten (pro Browser-Tab).
+
+### REST-Schnittstelle
+
+`/wp-json/mh-timetable/v1/` (Anmeldung per WordPress-Cookie + `X-WP-Nonce`):
+
+| Methode | Pfad | Zweck |
+|---|---|---|
+| GET | `/ich` | eigene Rechte (Admin? Welche Bildungsgänge?) |
+| GET | `/termine/{id}` | Termin lesen (nur mit Bearbeitungsrecht) |
+| POST | `/termine` | Termin anlegen |
+| PUT | `/termine/{id}` | Termin ändern (nicht übergebene Felder bleiben) |
+| DELETE | `/termine/{id}` | Termin löschen |
+
+Antworten beim Speichern enthalten `termin` und `hinweise` (`info` =
+Mitverschiebungen, `warning` = Konflikte). Fehler: 400 (ungültig, mit
+`data.details`), 401 (nicht angemeldet), 403 (keine Berechtigung), 404.
 
 ## Shortcode
 
@@ -109,12 +156,16 @@ Mitverschiebung wird nach dem Speichern aufgelistet.
 | Tabelle | Inhalt |
 |---|---|
 | `wp_tt_timetable` | Zeittafeln inkl. `status` (`entwurf` / `veroeffentlicht`) |
-| `wp_tt_termine` | Termine; Bildungsgang und Ereignistyp als Term-ID (`bildungsgang_id`, `ereignistyp_id`), der Name wird zusätzlich als Fallback gespeichert |
+| `wp_tt_termine` | Termine; Bildungsgang und Ereignistyp als ID (`bildungsgang_id`, `ereignistyp_id`), das Kürzel zusätzlich als Fallback |
 | `wp_tt_ferien` | Ferien und Feiertage (`typ` = `Ferien` oder `Feiertag`) |
+| `wp_tt_bildungsgang` | Bildungsgänge (`kuerzel` eindeutig, `bezeichnung`, `aktiv`) |
+| `wp_tt_bildungsgang_person` | Zuordnung Bildungsgang ↔ WordPress-Benutzer*in mit `rolle` (`al` / `bga`) |
+| `wp_tt_ereignistyp` | Ereignistypen (`kuerzel` eindeutig, `bezeichnung`, `farbe`, `aktiv`) |
 
-Bildungsgänge und Ereignistypen sind WordPress-Taxonomien (`bildungsgang`,
-`ereignistyp`). Wird ein Term umbenannt, zeigen alle Termine sofort den neuen
-Namen. Die Farbe eines Ereignistyps liegt in der Term-Meta `ereignisfarbe`.
+Bis 0.8 waren Bildungsgänge und Ereignistypen WordPress-Taxonomien. Die
+Migration auf 0.9.0 übernimmt sie mit denselben IDs; die alten Terms bleiben als
+Sicherung in der Datenbank. Wird ein Kürzel umbenannt, zeigen alle Termine
+sofort den neuen Namen.
 
 ## Entwicklung
 

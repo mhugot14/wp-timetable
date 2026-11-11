@@ -15,6 +15,8 @@ use MH\Timetable\Service\TimetableCopyService;
 use MH\Timetable\Service\SchulkalenderService;
 use MH\Timetable\Service\FristenService;
 use MH\Timetable\Service\KonfliktService;
+use MH\Timetable\Service\Berechtigungen;
+use MH\Timetable\Controller\RestController;
 use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
 use MH\Timetable\Controller\FerienController;
@@ -42,6 +44,7 @@ class Kernel
         $copyService     = new TimetableCopyService($timetableRepo, $termineRepo, $schulkalender);
         $fristenService  = new FristenService($schulkalender, $termineRepo, $ereignistypRepo);
         $konfliktService = new KonfliktService($schulkalender, $fristenService, $termineRepo);
+        $berechtigungen  = new Berechtigungen($bildungsgangRepo);
 
         // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
         $terminController    = new TerminController($termineRepo, $fristenService, $konfliktService);
@@ -59,11 +62,16 @@ class Kernel
             $stammdaten,
             $icalService,
             $fristenService,
-            $konfliktService
+            $konfliktService,
+            $berechtigungen
         );
         new StammdatenAdmin($stammdaten, $fristenService);
 
-        // --- 5. HOOKS & AJAX ---
+        // --- 5. REST-Schnittstelle für die Bearbeitung im Frontend ---
+        $rest = new RestController($terminController, $termineRepo, $timetableRepo, $stammdaten, $berechtigungen);
+        add_action('rest_api_init', [$rest, 'registerRoutes']);
+
+        // --- 6. HOOKS & AJAX ---
         add_action('init', [\MH\Timetable\Install\Schema::class, 'maybeMigrateData'], 20);
         add_action('wp_head', [$stammdaten, 'generateDynamicCss']);
         add_action('admin_head', [$stammdaten, 'generateDynamicCss']);

@@ -72,12 +72,29 @@ class TerminController
             wp_die('Sicherheitsprüfung fehlgeschlagen (Nonce).');
         }
 
-        $sanitizedData = $this->sanitizeFormData($formData);
+        return $this->speichern($formData, (int)($formData['id'] ?? 0))['errors'];
+    }
+
+    /**
+     * Gemeinsame Speicherlogik für Backend-Formular und REST-Schnittstelle:
+     * bereinigen, prüfen, speichern, Fristen mitziehen, Konflikte sammeln.
+     * Rechte prüft der Aufrufer (Backend: Admin; REST: Berechtigungen).
+     *
+     * @param array $roh Felder wie im Formular (timetable_ID, bildungsgang, …)
+     * @param int   $id  0 = neuer Termin
+     * @return array{errors: array, id: int}
+     */
+    public function speichern(array $roh, int $id = 0): array
+    {
+        $this->hinweise = ['info' => [], 'warning' => []];
+        $sanitizedData = $this->sanitizeFormData($roh);
         $errors = $this->checkFormData($sanitizedData);
 
         if (empty($errors)) {
-            $id = (int)($formData['id'] ?? 0);
             $alt = $id > 0 ? $this->repository->find($id) : null;
+            if ($id > 0 && !$alt) {
+                return ['errors' => ['id' => ['Der Termin wurde nicht gefunden.']], 'id' => $id];
+            }
 
             if ($id > 0) {
                 $ok = $this->editObject($id, $sanitizedData);
@@ -93,7 +110,7 @@ class TerminController
             }
         }
 
-        return $errors;
+        return ['errors' => $errors, 'id' => $id];
     }
 
     /**

@@ -410,3 +410,204 @@
 .tt-abo-hinweis small {
     color: #666;
 }
+
+/* ===== 0.9.0: Monatszeile, Legende, Entwurf ===== */
+.timetablegrid_thead tr.tt-month-row th.tt-month-head {
+    height: 28px;
+    line-height: 1.2 !important;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: left;
+    padding: 0 6px !important;
+    white-space: nowrap;
+    overflow: hidden;
+    border-left: 2px solid #8fb3d9;
+    background-color: #00376e;
+}
+.timetablegrid th.tt-monatsanfang,
+.timetablegrid td.tt-monatsanfang {
+    border-left: 2px solid #8fb3d9;
+}
+.tt-legende {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 0 0 12px;
+    font-size: 0.85em;
+}
+.tt-legende-eintrag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+.tt-legende-farbe {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+.tt-entwurf-badge {
+    color: #d63638;
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 0.6em;
+    vertical-align: middle;
+    margin-left: 10px;
+}
+
+/* ===== 0.9.0: Bearbeiten im Frontend ===== */
+.tt-edit-toggle {
+    padding: 8px 15px;
+    border: 1px solid #996800;
+    background: #fff;
+    color: #996800;
+    cursor: pointer;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+.tt-edit-toggle[aria-pressed="true"] {
+    background: #996800;
+    color: #fff;
+}
+.tt-edit-bar,
+.tt-add-inline {
+    display: none;
+}
+.tt-edit-mode .tt-edit-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 8px 12px;
+    margin: 0 0 12px;
+    background: #fcf3dc;
+    border-left: 4px solid #996800;
+    font-size: 0.9em;
+}
+.tt-edit-mode .tt-add-inline {
+    display: inline-block;
+    margin-left: 4px;
+    width: 20px;
+    height: 20px;
+    line-height: 18px;
+    padding: 0;
+    border: 1px solid #996800;
+    border-radius: 50%;
+    background: #fff;
+    color: #996800;
+    font-weight: bold;
+    cursor: pointer;
+    vertical-align: middle;
+}
+.tt-edit-mode .tt-editierbar {
+    cursor: pointer;
+    outline: 2px dashed rgba(153, 104, 0, .6);
+    outline-offset: -2px;
+}
+.tt-edit-mode .tt-editierbar:hover,
+.tt-edit-mode .tt-editierbar:focus {
+    outline: 2px solid #996800;
+    filter: brightness(1.1);
+}
+.tt-edit-dialog {
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    width: min(560px, 94vw);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .3);
+}
+.tt-edit-dialog::backdrop {
+    background: rgba(0, 0, 0, .45);
+}
+.tt-edit-form {
+    padding: 20px 24px;
+}
+.tt-edit-form h3 {
+    margin-top: 0;
+}
+.tt-edit-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+}
+.tt-edit-grid label {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+}
+.tt-edit-grid input,
+.tt-edit-grid select {
+    font-weight: normal;
+    padding: 6px 8px;
+}
+.tt-edit-grid .tt-span-2 {
+    grid-column: span 2;
+}
+@media (max-width: 480px) {
+    .tt-edit-grid { grid-template-columns: 1fr; }
+    .tt-edit-grid .tt-span-2 { grid-column: auto; }
+}
+.tt-edit-meldung:empty {
+    display: none;
+}
+.tt-edit-meldung {
+    margin-top: 14px;
+    padding: 8px 12px;
+    font-size: 0.9em;
+    border-left: 4px solid #72aee6;
+    background: #f0f6fc;
+}
+.tt-edit-meldung ul {
+    margin: 0;
+    padding-left: 18px;
+}
+.tt-edit-meldung.tt-meldung-fehler  { border-color: #d63638; background: #fcf0f1; }
+.tt-edit-meldung.tt-meldung-warnung { border-color: #dba617; background: #fcf9e8; }
+.tt-edit-aktionen {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 18px;
+}
+.tt-edit-rechts {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+}
+.tt-edit-loeschen {
+    color: #d63638;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+}
+.tt-edit-speichern {
+    background: #002a55;
+    color: #fff;
+    border: 1px solid #002a55;
+    border-radius: 4px;
+    padding: 6px 16px;
+    cursor: pointer;
+}
+.tt-edit-abbrechen {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 6px 14px;
+    cursor: pointer;
+}
+
+/* Spaltenbreiten über colgroup (Monatszeile hat zusammengefasste Zellen) */
+.timetablegrid col.tt-col-bg  { width: 140px; }
+.timetablegrid col.tt-col-tag { width: 30px; }
+.timetablegrid th.tt-month-head {
+    width: auto !important;
+    min-width: 0 !important;
+    max-width: none !important;
+}

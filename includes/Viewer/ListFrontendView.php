@@ -15,12 +15,15 @@ class ListFrontendView
     private array $ferien;
     /** @var array<string,string> Ereignistyp-Name → Farbe */
     private array $farben;
+    /** @var string[] Bildungsgänge, die die aktuelle Person bearbeiten darf */
+    private array $editierbareBgs;
 
-    public function __construct(Timetable $timetable, array $ferien = [], array $farben = [])
+    public function __construct(Timetable $timetable, array $ferien = [], array $farben = [], array $editierbareBgs = [])
     {
         $this->timetable = $timetable;
         $this->ferien = $ferien;
         $this->farben = $farben;
+        $this->editierbareBgs = $editierbareBgs;
     }
 
     public function render(): string
@@ -50,7 +53,7 @@ class ListFrontendView
             
             // 4. Die Card mit dem wichtigen data-bg Attribut für den Filter
             $html .= sprintf(
-                '<div class="tt-list-card" data-bg="%s" style="border-left: 5px solid %s;">
+                '<div class="tt-list-card' . $this->editKlasse($termin) . '" data-bg="%s" data-termin-id="' . (int)$termin->getId() . '" style="border-left: 5px solid %s;">
                     <div class="tt-list-card-content">
                         <div class="tt-list-card-header">
                             <span class="tt-list-bg">%s</span>
@@ -96,5 +99,11 @@ class ListFrontendView
     private function getEreignisColor(string $typeName): string
     {
         return esc_attr($this->farben[$typeName] ?? '#cccccc');
+    }
+
+    /** CSS-Klasse für anklickbare Termine im Bearbeiten-Modus */
+    private function editKlasse(\MH\Timetable\Model\Entity\Termin $termin): string
+    {
+        return in_array($termin->getBildungsgang(), $this->editierbareBgs, true) ? ' tt-editierbar' : '';
     }
 }
