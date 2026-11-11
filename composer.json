@@ -1,10 +1,10 @@
 {
     "name": "mhugot/wp-timetable",
-    "description": "Professionelles Timetable Management",
+    "description": "Timetable-Verwaltung (Zeugnis- und Prüfungsorganisation) für WordPress",
     "type": "wordpress-plugin",
     "license": "GPL-2.0-or-later",
     "require": {
-        "phpoffice/phpspreadsheet": "^1.17"
+        "php": ">=7.4"
     },
     "autoload": {
         "psr-4": {
@@ -12,9 +12,6 @@
         }
     },
     "config": {
-        "optimize-autoloader": true,
-        "allow-plugins": {
-            "composer/installers": true
-        }
+        "optimize-autoloader": true
     }
 }

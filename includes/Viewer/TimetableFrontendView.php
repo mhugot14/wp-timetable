@@ -10,11 +10,14 @@ class TimetableFrontendView {
     private Timetable $timetable;
     private string $entwurf;
     private array $ferien;
+    /** @var array<string,string> Ereignistyp-Name → Farbe */
+    private array $farben;
 
-    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = []) {
+    public function __construct(Timetable $timetable, string $entwurf = 'nein', array $ferien = [], array $farben = []) {
         $this->timetable = $timetable;
         $this->entwurf = $entwurf;
         $this->ferien = $ferien;
+        $this->farben = $farben;
     }
 
     public function render(): string {
@@ -49,9 +52,9 @@ class TimetableFrontendView {
         // Switcher
         $html .= '
 		<div class="tt-view-switcher">
-			<button class="tt-switch-btn active" data-view="tt-view-gantt-' . $uid . '"><span class="dashicons dashicons-chart-bar"></span> GANTT</button>
-			<button class="tt-switch-btn" data-view="tt-view-list-' . $uid . '"><span class="dashicons dashicons-list-view"></span> Liste</button>
-			<button class="tt-switch-btn" data-view="tt-view-month-' . $uid . '"><span class="dashicons dashicons-calendar-alt"></span> Monat</button>
+			<button type="button" class="tt-switch-btn active" data-view="tt-view-gantt-' . $uid . '"><span class="dashicons dashicons-chart-bar"></span> GANTT</button>
+			<button type="button" class="tt-switch-btn" data-view="tt-view-list-' . $uid . '"><span class="dashicons dashicons-list-view"></span> Liste</button>
+			<button type="button" class="tt-switch-btn" data-view="tt-view-month-' . $uid . '"><span class="dashicons dashicons-calendar-alt"></span> Monat</button>
 		</div>';
         
         $html .= '</div>'; // Ende tt-controls-row
@@ -64,17 +67,16 @@ class TimetableFrontendView {
         // 2. Container für die Ansichten
         $html .= '<div id="tt-view-gantt-' . $uid . '" class="tt-view-container">' . $this->generiereGantt() . '</div>';
         
-        $listView = new ListFrontendView($this->timetable, $this->ferien);
+        $listView = new ListFrontendView($this->timetable, $this->ferien, $this->farben);
         $html .= '<div id="tt-view-list-' . $uid . '" class="tt-view-container" style="display:none;">' . $listView->render() . '</div>';
-		
-		$monthView = new MonthFrontendView($this->timetable, $this->ferien);
-		$html .= '<div id="tt-view-month-' . $uid . '" class="tt-view-container" style="display:none;">' . $monthView->render() . '</div>';
-		
+
+        $monthView = new MonthFrontendView($this->timetable, $this->ferien, $this->farben);
+        $html .= '<div id="tt-view-month-' . $uid . '" class="tt-view-container" style="display:none;">' . $monthView->render() . '</div>';
+
         $html .= '</div>'; // Ende wrapper
 
-        // 3. JavaScript (Filter & Switcher)
-		$html .= $this->getInlineJs(); // Einfach immer ausgeben
-		return $html;
+        // Filter & Umschalter: js/timetable_frontend.js (wird vom Shortcode eingebunden)
+        return $html;
     }
 
     private function generiereGantt(): string {
@@ -236,71 +238,4 @@ class TimetableFrontendView {
         $map = ['1'=>'Mo','2'=>'Di','3'=>'Mi','4'=>'Do','5'=>'Fr','6'=>'Sa','7'=>'So'];
         return $map[$date->format('N')];
     }
-
-private function getInlineJs(): string {
-    return '<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        
-        // 1. Multi-Filter Logik
-        document.addEventListener("change", function(e) {
-            const checkbox = e.target.closest(".tt-bg-checkbox, .tt-select-all");
-            if (!checkbox) return;
-
-            const wrapper = checkbox.closest(".mh-tt-frontend-wrapper");
-            const allCheckboxes = wrapper.querySelectorAll(".tt-bg-checkbox");
-            const selectAllCheckbox = wrapper.querySelector(".tt-select-all");
-            
-            // --- Logik für "Alle auswählen" ---
-            if (checkbox.classList.contains("tt-select-all")) {
-                allCheckboxes.forEach(cb => cb.checked = checkbox.checked);
-            } else {
-                // 🟢 FIX: Prüfen, ob "Alle auswählen" deaktiviert werden muss
-                const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
-                if (selectAllCheckbox) {
-                    selectAllCheckbox.checked = allChecked;
-                }
-            }
-
-            // Aktive Bildungsgänge sammeln
-            const checkedBoxes = wrapper.querySelectorAll(".tt-bg-checkbox:checked");
-            const selectedValues = Array.from(checkedBoxes).map(cb => cb.value.trim());
-
-            // Alle Elemente mit [data-bg] filtern
-            wrapper.querySelectorAll("[data-bg]").forEach(el => {
-                const bgValue = el.dataset.bg.trim();
-                if (selectedValues.includes(bgValue)) {
-                    el.classList.remove("tt-hidden");
-                } else {
-                    el.classList.add("tt-hidden");
-                }
-            });
-
-            // Divider in der Liste fixen
-            wrapper.querySelectorAll(".tt-list-date-divider").forEach(div => {
-                let hasVisible = false;
-                let next = div.nextElementSibling;
-                while(next && next.classList.contains("tt-list-card")) {
-                    if(!next.classList.contains("tt-hidden")) { hasVisible = true; break; }
-                    next = next.nextElementSibling;
-                }
-                if(hasVisible) div.classList.remove("tt-hidden");
-                else div.classList.add("tt-hidden");
-            });
-        });
-              // 2. Switcher-Logik (Umschalten GANTT / Liste / Monat)
-              document.addEventListener("click", function(e) {
-                  const btn = e.target.closest(".tt-switch-btn");
-                  if (!btn) return;
-
-                  const wrapper = btn.closest(".mh-tt-frontend-wrapper");
-                  wrapper.querySelectorAll(".tt-switch-btn").forEach(b => b.classList.remove("active"));
-                  btn.classList.add("active");
-
-                  wrapper.querySelectorAll(".tt-view-container").forEach(c => c.style.display = "none");
-                  const target = document.getElementById(btn.dataset.view);
-                  if (target) target.style.display = "block";
-              });
-          });
-          </script>';
-      }
 }

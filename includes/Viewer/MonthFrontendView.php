@@ -12,10 +12,13 @@ use DatePeriod;
 class MonthFrontendView {
     private Timetable $timetable;
     private array $ferien;
+    /** @var array<string,string> Ereignistyp-Name → Farbe */
+    private array $farben;
 
-    public function __construct(Timetable $timetable, array $ferien = []) {
+    public function __construct(Timetable $timetable, array $ferien = [], array $farben = []) {
         $this->timetable = $timetable;
         $this->ferien = $ferien;
+        $this->farben = $farben;
     }
 
     public function render(): string {
@@ -125,8 +128,7 @@ class MonthFrontendView {
 	}
 
     private function getEreignisColor(string $typeName): string {
-        $term = get_term_by('name', $typeName, 'ereignistyp');
-        return ($term && !is_wp_error($term)) ? get_term_meta($term->term_id, 'ereignisfarbe', true) ?: '#ccc' : '#ccc';
+        return esc_attr($this->farben[$typeName] ?? '#cccccc');
     }
 
     private function getGermanMonth(string $month): string {

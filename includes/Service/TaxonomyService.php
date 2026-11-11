@@ -23,11 +23,13 @@ class TaxonomyService
                 'add_new_item'      => 'Neuen Bildungsgang hinzufügen',
                 'new_item_name'     => 'Name des neuen Bildungsgangs',
             ],
-            'public'            => true,
-            'hierarchical'      => false,
-            'show_ui'           => true,
-            'show_admin_column' => true,
-            'show_in_rest'      => true,
+            // Nur intern im Backend: keine Archivseiten, keine REST-Route.
+            'public'             => false,
+            'publicly_queryable' => false,
+            'rewrite'            => false,
+            'hierarchical'       => false,
+            'show_ui'            => true,
+            'show_in_rest'       => false,
         ]);
 
         // 2. Ereignistypen
@@ -40,10 +42,12 @@ class TaxonomyService
                 'edit_item'         => 'Ereignistyp bearbeiten',
                 'add_new_item'      => 'Neuen Ereignistyp hinzufügen',
             ],
-            'public'            => true,
-            'hierarchical'      => false,
-            'show_ui'           => true,
-            'show_in_rest'      => true,
+            'public'             => false,
+            'publicly_queryable' => false,
+            'rewrite'            => false,
+            'hierarchical'       => false,
+            'show_ui'            => true,
+            'show_in_rest'       => false,
         ]);
         // Standard-Ereignistypen nur ein einziges Mal anlegen. Sonst würden
         // vom Admin gelöschte Typen bei jedem Seitenaufruf wieder auftauchen.
@@ -105,16 +109,13 @@ class TaxonomyService
      */
     public function generateDynamicCss(): void
     {
-        $terms = get_terms(['taxonomy' => 'ereignistyp', 'hide_empty' => false]);
-        if (empty($terms) || is_wp_error($terms)) return;
+        $farben = $this->getFarbMap();
+        if (empty($farben)) return;
 
         echo '<style id="mh-timetable-dynamic-css">';
-        foreach ($terms as $term) {
-            $color = get_term_meta($term->term_id, 'ereignisfarbe', true);
-            if ($color) {
-                $slug = sanitize_title($term->name);
-                echo ".td_{$slug} { background-color: {$color} !important; color: white; }\n";
-            }
+        foreach ($farben as $name => $color) {
+            $slug = sanitize_title($name); // identisch zur Klasse im GANTT (td_<slug>)
+            echo ".td_{$slug} { background-color: {$color} !important; color: white; }\n";
         }
         echo '</style>';
     }
@@ -157,7 +158,28 @@ class TaxonomyService
 			return is_wp_error($terms) ? [] : $terms;
 		}
 		
-		public function getBildungsgaenge(): array
+		/** @var array<string,string>|null Cache Ereignistyp-Name → Farbe */
+	private ?array $farbMap = null;
+
+	/**
+	 * Liefert alle Ereignistyp-Farben als Map Name → Hex-Farbe (einmal pro Request geladen).
+	 * @return array<string,string>
+	 */
+	public function getFarbMap(): array
+	{
+		if ($this->farbMap === null) {
+			$this->farbMap = [];
+			foreach ($this->getEreignistypen() as $term) {
+				$color = sanitize_hex_color((string)get_term_meta($term->term_id, 'ereignisfarbe', true));
+				if ($color) {
+					$this->farbMap[$term->name] = $color;
+				}
+			}
+		}
+		return $this->farbMap;
+	}
+
+	public function getBildungsgaenge(): array
 		{
 			$terms = get_terms(['taxonomy' => 'bildungsgang', 'hide_empty' => false]);
 			return is_wp_error($terms) ? [] : $terms;

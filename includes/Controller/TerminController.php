@@ -5,7 +5,7 @@ namespace MH\Timetable\Controller;
 
 use MH\Timetable\Model\Entity\Termin;
 use MH\Timetable\Model\Repository\TermineRepositoryInterface;
-use PhpOffice\PhpSpreadsheet\IOFactory;
+use MH\Timetable\Install\Schema;
 use DateTime;
 
 /**
@@ -115,6 +115,7 @@ class TerminController
         if (empty($data['bezeichnung'])) {
             $errors['bezeichnung'][] = 'Bezeichnung fehlt.';
         }
+        $errors = array_merge_recursive($errors, self::checkLengths($data));
         if (empty($data['bildungsgang'])) {
             $errors['bildungsgang'][] = 'Bitte wählen Sie einen Bildungsgang aus.';
         }
@@ -136,6 +137,27 @@ class TerminController
     }
 
     /**
+     * Prüft die Feldlängen gegen die Spaltenbreiten der Datenbank.
+     * Nur gesetzte Felder werden geprüft (passt so auch für die Massenänderung).
+     */
+    private static function checkLengths(array $data): array
+    {
+        $limits = [
+            'bezeichnung'    => ['Bezeichnung', Schema::LEN_TERMIN_BEZEICHNUNG],
+            'bildungsgang'   => ['Bildungsgang', Schema::LEN_TERMIN_BILDUNGSGANG],
+            'ereignistyp'    => ['Ereignistyp', Schema::LEN_TERMIN_EREIGNISTYP],
+            'verantwortlich' => ['Verantwortlich', Schema::LEN_TERMIN_VERANTWORTLICH],
+        ];
+        $errors = [];
+        foreach ($limits as $field => [$label, $max]) {
+            if (isset($data[$field]) && is_string($data[$field]) && mb_strlen($data[$field]) > $max) {
+                $errors[$field][] = sprintf('%s ist zu lang (höchstens %d Zeichen).', $label, $max);
+            }
+        }
+        return $errors;
+    }
+
+    /**
      * Wandelt ein Datum im Format Y-m-d in ein DateTime (00:00 Uhr) um.
      * Liefert null bei ungültiger Eingabe statt eine Exception zu werfen.
      */
@@ -149,105 +171,11 @@ class TerminController
         return $date;
     }
 
-    /**
-     * Verarbeitet Massenänderungen (Bulk Edit).
-     */
-    public function processBulkEdit(array $ids, array $formData): void
-    {
-        // Mapping der Formularfelder auf Entity-Setter
-        $fieldToMethod = [
-            'timetable_ID' => 'setTimetableId',
-            'bezeichnung'  => 'setBezeichnung',
-            'bildungsgang' => 'setBildungsgang',
-            'beginn'       => 'setBeginn',
-            'ende'         => 'setEnde',
-            'verantwortlich' => 'setVerantwortlich',
-            'ereignistyp'  => 'setEreignistyp',
-        ];
-
-        foreach ($ids as $id) {
-            $termin = $this->getObjectById((int)$id);
-            if (!$termin) continue;
-
-            foreach ($formData as $field => $value) {
-                if (!empty($value) && isset($fieldToMethod[$field])) {
-                    $method = $fieldToMethod[$field];
-                    
-                    // Datumsfelder benötigen DateTime-Objekte
-                    if ($field === 'beginn' || $field === 'ende') {
-                        $value = new DateTime($value);
-                    }
-                    
-                    if (method_exists($termin, $method)) {
-                        $termin->$method($value);
-                    }
-                }
-            }
-            $this->repository->update((int)$id, $termin);
-        }
-    }
-
-    /**
-     * CSV-Import Logik
-     */
-    public function handleCsvUpload(): string
-    {
-        if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
-            return "Fehler beim Datei-Upload.";
-        }
-
-        $filePath = $_FILES['csv_file']['tmp_name'];
-        return $this->readCsv($filePath);
-    }
-
-    private function readCsv(string $filePath): string
-    {
-        $reader = IOFactory::createReader('Csv');
-        $reader->setDelimiter(';');
-        $spreadsheet = $reader->load($filePath);
-        $worksheet = $spreadsheet->getActiveSheet();
-        
-        $count = 0;
-        $headers = [];
-        $isFirstRow = true;
-
-        foreach ($worksheet->getRowIterator() as $row) {
-            if ($isFirstRow) {
-                foreach ($row->getCellIterator() as $cell) {
-                    $headers[] = $cell->getFormattedValue();
-                }
-                $isFirstRow = false;
-                continue;
-            }
-
-            $rowData = [];
-            $i = 0;
-            foreach ($row->getCellIterator() as $cell) {
-                $rowData[$headers[$i] ?? $i] = $cell->getFormattedValue();
-                $i++;
-            }
-
-            // Import via addObject
-            $this->addObject([
-                'beginn'         => $rowData['beginn'] ?? '',
-                'ende'           => $rowData['ende'] ?? '',
-                'bildungsgang'   => $rowData['bildungsgang'] ?? '',
-                'bezeichnung'    => $rowData['bezeichnung'] ?? '',
-                'ereignistyp'    => $rowData['ereignistyp'] ?? '',
-                'verantwortlich' => $rowData['verantwortlich'] ?? '',
-                'timetableId'    => (int)($rowData['timetable_ID'] ?? 0)
-            ]);
-            $count++;
-        }
-
-        return "Erfolgreich $count Termine importiert.";
-    }
-	
 	/**
  * Holt gefilterte Termine vom Repository.
  * @return \MH\Timetable\Model\Entity\Termin[]
  */
-	public function getFilteredTermine(?int $timetableId, ?string $bildungsgang, ?string $ereignistyp): array
+	public function getFilteredTermine(int $timetableId, string $bildungsgang, string $ereignistyp): array
 	{
 		// Wir rufen die getFiltered Methode des Repositories auf
 		return $this->repository->getFiltered($timetableId, $bildungsgang, $ereignistyp);
@@ -306,6 +234,7 @@ class TerminController
 		}
 		if (!empty($formData['verantwortlich'])) $updateData['verantwortlich'] = sanitize_text_field($formData['verantwortlich']);
 
+		$errors = array_merge_recursive($errors, self::checkLengths($updateData));
 		if (!empty($errors)) return $errors;
 		if (empty($updateData)) {
 			return ['allgemein' => ['Es wurde kein Feld ausgefüllt – nichts geändert.']];

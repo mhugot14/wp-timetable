@@ -11,6 +11,7 @@ use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 use MH\Timetable\Model\Repository\FerienRepositoryInterface;
 use MH\Timetable\Service\TaxonomyService;
 use MH\Timetable\Service\IcalService;
+use MH\Timetable\Install\Schema;
 
 class View {
     /** Berechtigung für alle Verwaltungsfunktionen des Plugins. */
@@ -188,13 +189,13 @@ class View {
                     <tr><th>Bildungsgang</th><td><select name="bildungsgang" id="f_bildungsgang" required><option value="">-- wählen --</option>
                         <?php foreach ($this->taxonomyService->getBildungsgaenge() as $bg) printf('<option value="%s">%s</option>', esc_attr($bg->name), esc_html($bg->name)); ?>
                     </select></td></tr>
-                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" maxlength="50" required></td></tr>
+                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" maxlength="<?php echo Schema::LEN_TERMIN_BEZEICHNUNG; ?>" required></td></tr>
                     <tr><th>Ereignistyp</th><td><select name="ereignistyp" id="f_ereignistyp" required>
                                   <option value="">-- wählen --</option>
                         <?php foreach ($ereignistypen as $et) printf('<option value="%s">%s</option>', esc_attr($et->name), esc_html($et->name)); ?>
                     </select></td></tr>
                     <tr><th>Zeitraum</th><td>Von: <input type="date" name="beginn" id="f_beginn" required> Bis: <input type="date" name="ende" id="f_ende" required></td></tr>
-                    <tr><th>Verantwortlich</th><td><input type="text" name="verantwortlich" id="f_verantwortlich" class="regular-text" maxlength="30"></td></tr>
+                    <tr><th>Verantwortlich</th><td><input type="text" name="verantwortlich" id="f_verantwortlich" class="regular-text" maxlength="<?php echo Schema::LEN_TERMIN_VERANTWORTLICH; ?>"></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Speichern</button><button type="button" class="button mh-tt-close-btn">Abbrechen</button>
             </form>
@@ -210,8 +211,8 @@ class View {
                 <input type="hidden" name="action" value="mh_tt_save_timetable"><input type="hidden" name="id" id="tt_f_id">
                 <?php wp_nonce_field('timetable_speichern_nonce', 'timetable_speichern_nonce'); ?>
                 <table class="form-table">
-                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="tt_f_bezeichnung" class="regular-text" maxlength="30" required></td></tr>
-                    <tr><th>Beschreibung</th><td><textarea name="beschreibung" id="tt_f_beschreibung" class="regular-text" rows="3" maxlength="100" required></textarea></td></tr>
+                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="tt_f_bezeichnung" class="regular-text" maxlength="<?php echo Schema::LEN_TIMETABLE_BEZEICHNUNG; ?>" required></td></tr>
+                    <tr><th>Beschreibung</th><td><textarea name="beschreibung" id="tt_f_beschreibung" class="regular-text" rows="3" maxlength="<?php echo Schema::LEN_TIMETABLE_BESCHREIBUNG; ?>" required></textarea></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Speichern</button>
             </form>
@@ -227,7 +228,7 @@ class View {
                 <input type="hidden" name="action" value="mh_tt_copy_timetable"><input type="hidden" name="source_id" id="copy_source_id">
                 <?php wp_nonce_field('copy_timetable_nonce', 'copy_timetable_nonce'); ?>
                 <table class="form-table">
-                    <tr><th>Neuer Name</th><td><input type="text" name="new_name" id="copy_new_name" class="regular-text" maxlength="30" required></td></tr>
+                    <tr><th>Neuer Name</th><td><input type="text" name="new_name" id="copy_new_name" class="regular-text" maxlength="<?php echo Schema::LEN_TIMETABLE_BEZEICHNUNG; ?>" required></td></tr>
                     <tr><th>Neues Enddatum</th><td><input type="date" name="new_end_date" required><p class="description">Datum, an dem der letzte Termin der Kopie enden soll.</p></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Kopie erstellen</button><button type="button" class="button mh-tt-close-btn">Abbrechen</button>
@@ -350,12 +351,18 @@ class View {
     }
 
     // --- Assets ---
+    /** Lädt Admin-Assets nur auf den Plugin-Seiten. */
+    private function isPluginAdminPage(): bool {
+        return in_array($_GET['page'] ?? '', self::PLUGIN_PAGES, true);
+    }
+
     public function adminJavascript(): void {
+        if (!$this->isPluginAdminPage()) return;
         wp_enqueue_script('mh_tt_javascript', MH_TT_URL . 'includes/Viewer/js/mh_tt_javascript.js', ['jquery'], MH_TT_VERSION, true);
         wp_localize_script('mh_tt_javascript', 'mh_tt_params', ['nonce' => wp_create_nonce('mh_tt_nonce'), 'ajaxurl' => admin_url('admin-ajax.php')]);
     }
 
-    public function customAdminStyles(): void { wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css', [], MH_TT_VERSION); }
+    public function customAdminStyles(): void { if (!$this->isPluginAdminPage()) return; wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css', [], MH_TT_VERSION); }
     public function timetableEnqueueStyles(): void
 	{
 		wp_enqueue_style('dashicons');
@@ -370,6 +377,15 @@ class View {
 			[],
 			(string)$ver // Zwingt den Browser zum Neuladen bei jeder Änderung
 		);
+
+		// Nur registrieren – eingebunden wird das Script erst, wenn der Shortcode rendert.
+		wp_register_script(
+			'timetable-frontend',
+			MH_TT_URL . 'includes/Viewer/js/timetable_frontend.js',
+			[],
+			MH_TT_VERSION,
+			true
+		);
 	}
 
     // --- Shortcode ---
@@ -380,7 +396,13 @@ class View {
         $termine = $this->termineRepository->getByTimetableId($id); $timetable->setTermine($termine);
         $alleFerien = $this->ferienRepository->getAll(); $ferienMap = [];
         foreach ($alleFerien as $f) { $curr = clone $f->getStartdatum(); while ($curr <= $f->getEnddatum()) { $ferienMap[$curr->format('d.m.y')] = $f->getName(); $curr->modify('+1 day'); } }
-        $frontendView = new \MH\Timetable\Viewer\TimetableFrontendView($timetable, (string)$atts['entwurf'], $ferienMap);
+        wp_enqueue_script('timetable-frontend');
+        $frontendView = new \MH\Timetable\Viewer\TimetableFrontendView(
+            $timetable,
+            (string)$atts['entwurf'],
+            $ferienMap,
+            $this->taxonomyService->getFarbMap()
+        );
         return $frontendView->render();
     }
 

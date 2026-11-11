@@ -13,11 +13,14 @@ class ListFrontendView
 {
     private Timetable $timetable;
     private array $ferien;
+    /** @var array<string,string> Ereignistyp-Name → Farbe */
+    private array $farben;
 
-    public function __construct(Timetable $timetable, array $ferien = [])
+    public function __construct(Timetable $timetable, array $ferien = [], array $farben = [])
     {
         $this->timetable = $timetable;
         $this->ferien = $ferien;
+        $this->farben = $farben;
     }
 
     public function render(): string
@@ -92,11 +95,6 @@ class ListFrontendView
      */
     private function getEreignisColor(string $typeName): string
     {
-        $term = get_term_by('name', $typeName, 'ereignistyp');
-        if ($term && !is_wp_error($term)) {
-            $color = get_term_meta($term->term_id, 'ereignisfarbe', true);
-            return $color ?: '#cccccc';
-        }
-        return '#cccccc';
+        return esc_attr($this->farben[$typeName] ?? '#cccccc');
     }
 }

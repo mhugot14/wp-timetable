@@ -53,6 +53,8 @@ class Kernel
 
         // --- 5. HOOKS & AJAX ---
         add_action('init', [$taxonomyService, 'registerTaxonomies']);
+        // Datenmigrationen brauchen die registrierten Taxonomien → danach ausführen.
+        add_action('init', [\MH\Timetable\Install\Schema::class, 'maybeMigrateData'], 20);
         add_action('wp_head', [$taxonomyService, 'generateDynamicCss']);
         add_action('admin_head', [$taxonomyService, 'generateDynamicCss']);
         

@@ -7,6 +7,7 @@ use MH\Timetable\Model\Entity\Timetable;
 use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 use MH\Timetable\Model\Repository\TermineRepositoryInterface;
 use MH\Timetable\Service\TimetableCopyService;
+use MH\Timetable\Install\Schema;
 use DateTime;
 
 /**
@@ -137,6 +138,12 @@ class TimetableController
         }
         if (empty($data['beschreibung'])) {
             $errors['beschreibung'][] = 'Bitte gib eine Beschreibung an.';
+        }
+        if (mb_strlen($data['bezeichnung']) > Schema::LEN_TIMETABLE_BEZEICHNUNG) {
+            $errors['bezeichnung'][] = sprintf('Die Bezeichnung ist zu lang (höchstens %d Zeichen).', Schema::LEN_TIMETABLE_BEZEICHNUNG);
+        }
+        if (mb_strlen($data['beschreibung']) > Schema::LEN_TIMETABLE_BESCHREIBUNG) {
+            $errors['beschreibung'][] = sprintf('Die Beschreibung ist zu lang (höchstens %d Zeichen).', Schema::LEN_TIMETABLE_BESCHREIBUNG);
         }
         return $errors;
     }
