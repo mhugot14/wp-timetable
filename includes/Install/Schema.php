@@ -14,7 +14,7 @@ namespace MH\Timetable\Install;
  */
 class Schema
 {
-    public const DB_VERSION = '2.0';
+    public const DB_VERSION = '2.1';
     public const DATA_VERSION = '2';
     public const OPTION_DB_VERSION = 'mh_tt_db_version';
     public const OPTION_DATA_VERSION = 'mh_tt_data_version';
@@ -68,6 +68,7 @@ class Schema
   id int(10) NOT NULL AUTO_INCREMENT,
   bezeichnung varchar(" . self::LEN_TIMETABLE_BEZEICHNUNG . ") NOT NULL,
   beschreibung varchar(" . self::LEN_TIMETABLE_BESCHREIBUNG . ") NOT NULL,
+  status varchar(20) NOT NULL DEFAULT 'veroeffentlicht',
   erzeugt_am timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY  (id)
 ) $charsetCollate;";

@@ -229,6 +229,8 @@ function initTerminLogic(modal, form) {
                     document.getElementById('tt_f_id').value = res.data.id;
                     document.getElementById('tt_f_bezeichnung').value = res.data.bezeichnung;
                     document.getElementById('tt_f_beschreibung').value = res.data.beschreibung;
+                    const statusField = document.getElementById('tt_f_status');
+                    if (statusField && res.data.status) statusField.value = res.data.status;
                     document.getElementById('tt-modal-title').innerText = 'Zeittafel bearbeiten';
                     modal.style.display = "flex";
                 } else {

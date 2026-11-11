@@ -28,6 +28,8 @@ class TimetablesListTable extends WP_List_Table
             'id'           => 'ID',
             'bezeichnung'  => 'Bezeichnung',
             'beschreibung' => 'Beschreibung',
+            'status'       => 'Status',
+            'shortcode'    => 'Shortcode',
             'erzeugt_am'   => 'Erzeugt am',
             'actions'      => 'Aktionen'
         ];
@@ -54,6 +56,11 @@ class TimetablesListTable extends WP_List_Table
             case 'id':           return (string)$item->getId();
             case 'bezeichnung':  return esc_html($item->getBezeichnung());
             case 'beschreibung': return esc_html($item->getBeschreibung());
+            case 'status':
+                $farbe = $item->isEntwurf() ? '#d63638' : '#00a32a';
+                return sprintf('<span style="color:%s; font-weight:600;">%s</span>', $farbe, esc_html($item->getStatusLabel()));
+            case 'shortcode':
+                return sprintf('<code style="user-select:all;">[insertTimetable id="%d"]</code>', $item->getId());
             case 'erzeugt_am':   return $item->getErzeugtAm()->format('d.m.Y H:i');
             default:             return 'n/a';
         }

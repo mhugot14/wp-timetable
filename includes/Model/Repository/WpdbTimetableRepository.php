@@ -45,8 +45,10 @@ class WpdbTimetableRepository implements TimetableRepositoryInterface
 			[
 				'bezeichnung'  => $timetable->getBezeichnung(),
 				'beschreibung' => $timetable->getBeschreibung(),
+				'status'       => $timetable->getStatus(),
 				'erzeugt_am'   => $timetable->getErzeugtAm()->format('Y-m-d H:i:s')
-			]
+			],
+			['%s', '%s', '%s', '%s']
 		);
 
 		if ($result) {
@@ -62,10 +64,11 @@ class WpdbTimetableRepository implements TimetableRepositoryInterface
             $this->tableName,
             [
                 'bezeichnung'  => $timetable->getBezeichnung(),
-                'beschreibung' => $timetable->getBeschreibung()
+                'beschreibung' => $timetable->getBeschreibung(),
+                'status'       => $timetable->getStatus(),
             ],
             ['id' => $id],
-            ['%s', '%s'],
+            ['%s', '%s', '%s'],
             ['%d']
         );
 
@@ -86,7 +89,8 @@ class WpdbTimetableRepository implements TimetableRepositoryInterface
         $timetable->setId((int)$row['id']);
         $timetable->setBezeichnung($row['bezeichnung']);
         $timetable->setBeschreibung($row['beschreibung']);
-        
+        $timetable->setStatus((string)($row['status'] ?? Timetable::STATUS_VEROEFFENTLICHT));
+
         $erzeugtAm = DateTime::createFromFormat('Y-m-d H:i:s', $row['erzeugt_am']);
         if ($erzeugtAm) {
             $timetable->setErzeugtAm($erzeugtAm);

@@ -10,6 +10,7 @@ use MH\Timetable\Service\HolidayApiService;
 use MH\Timetable\Service\TaxonomyService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\TimetableCopyService;
+use MH\Timetable\Service\SchulkalenderService;
 use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
 use MH\Timetable\Controller\FerienController;
@@ -32,7 +33,8 @@ class Kernel
         $icalService     = new IcalService();
         
         // Jetzt sind $timetableRepo und $termineRepo bekannt:
-        $copyService     = new TimetableCopyService($timetableRepo, $termineRepo);
+        $schulkalender   = new SchulkalenderService($ferienRepo);
+        $copyService     = new TimetableCopyService($timetableRepo, $termineRepo, $schulkalender);
 
         // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
         $terminController    = new TerminController($termineRepo);

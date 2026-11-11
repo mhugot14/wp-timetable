@@ -11,9 +11,19 @@ use DateTime;
  */
 class Timetable
 {
+    public const STATUS_ENTWURF = 'entwurf';
+    public const STATUS_VEROEFFENTLICHT = 'veroeffentlicht';
+
+    /** Anzeigenamen der Status-Werte */
+    public const STATUS_LABELS = [
+        self::STATUS_ENTWURF         => 'Entwurf',
+        self::STATUS_VEROEFFENTLICHT => 'Veröffentlicht',
+    ];
+
     private ?int $id = null;
     private string $bezeichnung = '';
     private string $beschreibung = '';
+    private string $status = self::STATUS_VEROEFFENTLICHT;
     private DateTime $erzeugtAm;
     
     /** @var Termin[] */
@@ -129,6 +139,27 @@ class Timetable
     public function setBeschreibung(string $beschreibung): void
     {
         $this->beschreibung = $beschreibung;
+    }
+
+    public function getStatus(): string
+    {
+        return $this->status;
+    }
+
+    /** Unbekannte Werte werden auf "veröffentlicht" zurückgesetzt. */
+    public function setStatus(string $status): void
+    {
+        $this->status = array_key_exists($status, self::STATUS_LABELS) ? $status : self::STATUS_VEROEFFENTLICHT;
+    }
+
+    public function isEntwurf(): bool
+    {
+        return $this->status === self::STATUS_ENTWURF;
+    }
+
+    public function getStatusLabel(): string
+    {
+        return self::STATUS_LABELS[$this->status];
     }
 
     public function getErzeugtAm(): DateTime

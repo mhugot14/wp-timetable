@@ -35,14 +35,54 @@ angelegt und migriert. Der Ordner `vendor/` wird nicht benötigt.
 
 | Attribut | Bedeutung |
 |---|---|
-| `id` | ID der Timetable (siehe Spalte *ID* unter *Timetables*) |
-| `entwurf` | `ja` zeigt den Hinweis „Entwurf – noch nicht verbindlich“ und blendet die iCal-Links aus |
+| `id` | ID der Timetable (den fertigen Shortcode zeigt die Spalte *Shortcode* unter *Timetables*) |
+| `entwurf` | veraltet – besser den **Status** der Timetable auf *Entwurf* setzen. `ja` wirkt weiterhin wie der Status *Entwurf*. |
+
+## Status: Entwurf / Veröffentlicht
+
+Jede Timetable hat einen Status (Spalte *Status*, änderbar im Bearbeiten-Dialog).
+
+- **Entwurf:** Das Frontend zeigt den Hinweis „Entwurf – noch nicht verbindlich“.
+  Es gibt keine iCal-Links, und der iCal-Endpunkt antwortet für nicht angemeldete
+  Besucher*innen mit 404. Bestehende Kalender-Abos bekommen also nichts, solange
+  die Timetable ein Entwurf ist.
+- **Veröffentlicht:** iCal-Download und Kalender-Abo sind verfügbar.
+
+Kopien einer Timetable werden immer als Entwurf angelegt.
+
+## Kalender-Abo (iCal)
+
+Unter der Beschreibung steht ein Abo-Link für alle Termine, in der GANTT-Ansicht
+je Bildungsgang die Links *iCal* (einmaliger Download) und *Abo*.
+
+- Abo-Links nutzen `webcal://`. Outlook, Apple- und Google-Kalender laden den
+  Kalender regelmäßig neu (Vorgabe: alle 6 Stunden), Änderungen kommen also
+  automatisch bei den Kolleg*innen an.
+- Jeder Termin hat eine stabile UID (`termin-<id>@<host>`). Eine Datumsänderung
+  verschiebt den Termin im Kalender, statt ihn doppelt anzulegen.
+- Hinweis zum Update auf 0.8.0: Wer vorher eine `.ics`-Datei *importiert* hat und
+  sie erneut importiert, bekommt die Termine einmalig doppelt (die UIDs haben sich
+  geändert). Empfehlung: alte Importe löschen und auf das Abo umsteigen.
+
+## Timetable kopieren
+
+*Timetables → Kopieren* legt eine Kopie mit allen Terminen an und verschiebt sie
+so, dass der letzte Termin am gewählten Enddatum liegt.
+
+- **Wochentagsgenau** (Standard): Verschiebung in ganzen Wochen, Wochentage
+  bleiben erhalten. Das Ende kann dafür bis zu 3 Tage vom Wunschdatum abweichen.
+- **Exakt:** Verschiebung um die genaue Anzahl Tage.
+- **Schultage beachten** (Standard): Beginnt ein Termin nach der Verschiebung in
+  Ferien, an einem Feiertag oder am Wochenende, wird er mit gleicher Dauer auf den
+  nächsten Schultag gelegt. Alle Verschiebungen werden danach aufgelistet.
+  Dafür müssen die Ferien des Zielzeitraums unter *Einstellungen* hinterlegt sein,
+  sonst erscheint eine Warnung.
 
 ## Datenmodell
 
 | Tabelle | Inhalt |
 |---|---|
-| `wp_tt_timetable` | Zeittafeln |
+| `wp_tt_timetable` | Zeittafeln inkl. `status` (`entwurf` / `veroeffentlicht`) |
 | `wp_tt_termine` | Termine; Bildungsgang und Ereignistyp als Term-ID (`bildungsgang_id`, `ereignistyp_id`), der Name wird zusätzlich als Fallback gespeichert |
 | `wp_tt_ferien` | Ferien und Feiertage (`typ` = `Ferien` oder `Feiertag`) |
 

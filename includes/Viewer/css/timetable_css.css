@@ -395,3 +395,18 @@
 .tt-filter-box {
     flex: 1; /* Nimmt den verfügbaren Platz ein */
 }
+/* Kalender-Abo-Hinweis unter der Beschreibung (seit 0.8.0) */
+.tt-abo-hinweis {
+    font-size: 0.9em;
+    margin: -0.5em 0 1em;
+}
+.tt-abo-hinweis .dashicons {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    vertical-align: text-bottom;
+    color: #002a55;
+}
+.tt-abo-hinweis small {
+    color: #666;
+}

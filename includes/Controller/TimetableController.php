@@ -43,6 +43,7 @@ class TimetableController
             'id'           => !empty($formData['id']) ? (int)$formData['id'] : null,
             'bezeichnung'  => sanitize_text_field($formData['bezeichnung'] ?? ''),
             'beschreibung' => sanitize_text_field($formData['beschreibung'] ?? ''),
+            'status'       => sanitize_key($formData['status'] ?? Timetable::STATUS_VEROEFFENTLICHT),
         ];
 
         $errors = $this->checkFormData($sanitizedData);
@@ -64,6 +65,7 @@ class TimetableController
         $timetable = new Timetable();
         $timetable->setBezeichnung($data['bezeichnung']);
         $timetable->setBeschreibung($data['beschreibung']);
+        $timetable->setStatus($data['status'] ?? Timetable::STATUS_VEROEFFENTLICHT);
 
         return $this->repository->create($timetable);
     }
@@ -77,6 +79,9 @@ class TimetableController
 
         $timetable->setBezeichnung($data['bezeichnung']);
         $timetable->setBeschreibung($data['beschreibung']);
+        if (isset($data['status'])) {
+            $timetable->setStatus($data['status']);
+        }
 
         return $this->repository->update($id, $timetable);
     }
@@ -181,23 +186,36 @@ class TimetableController
 			wp_send_json_success([
 				'id'           => $tt->getId(),
 				'bezeichnung'  => $tt->getBezeichnung(),
-				'beschreibung' => $tt->getBeschreibung()
+				'beschreibung' => $tt->getBeschreibung(),
+				'status'       => $tt->getStatus(),
 			]);
 
 			// wp_send_json_success ruft automatisch die() auf, 
 			// das verhindert, dass WordPress eine '0' anhängt.
 		}
 		
-		public function copyTimetable(array $data): bool
+		/**
+		 * Kopiert eine Timetable (siehe TimetableCopyService::duplicate für das Ergebnis-Array).
+		 */
+		public function copyTimetable(array $data): array
 		{
 			$sourceId = (int)($data['source_id'] ?? 0);
 			$newName = sanitize_text_field($data['new_name'] ?? '');
 			$newEndDate = DateTime::createFromFormat('!Y-m-d', (string)($data['new_end_date'] ?? ''));
 
 			if ($sourceId <= 0 || $newName === '' || !$newEndDate) {
-				return false;
+				return ['success' => false, 'message' => 'Bitte Namen und ein gültiges Enddatum angeben.', 'newId' => null, 'anzahl' => 0, 'verschoben' => [], 'warnungen' => []];
+			}
+			if (mb_strlen($newName) > Schema::LEN_TIMETABLE_BEZEICHNUNG) {
+				return ['success' => false, 'message' => sprintf('Der Name ist zu lang (höchstens %d Zeichen).', Schema::LEN_TIMETABLE_BEZEICHNUNG), 'newId' => null, 'anzahl' => 0, 'verschoben' => [], 'warnungen' => []];
 			}
 
-			return $this->copyService->duplicate($sourceId, $newName, $newEndDate);
+			return $this->copyService->duplicate(
+				$sourceId,
+				$newName,
+				$newEndDate,
+				($data['verschiebung'] ?? 'wochen') !== 'tage',
+				!empty($data['schultage'])
+			);
 		}
 }

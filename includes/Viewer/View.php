@@ -12,6 +12,7 @@ use MH\Timetable\Model\Repository\FerienRepositoryInterface;
 use MH\Timetable\Service\TaxonomyService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Install\Schema;
+use MH\Timetable\Model\Entity\Timetable;
 
 class View {
     /** Berechtigung für alle Verwaltungsfunktionen des Plugins. */
@@ -213,6 +214,10 @@ class View {
                 <table class="form-table">
                     <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="tt_f_bezeichnung" class="regular-text" maxlength="<?php echo Schema::LEN_TIMETABLE_BEZEICHNUNG; ?>" required></td></tr>
                     <tr><th>Beschreibung</th><td><textarea name="beschreibung" id="tt_f_beschreibung" class="regular-text" rows="3" maxlength="<?php echo Schema::LEN_TIMETABLE_BESCHREIBUNG; ?>" required></textarea></td></tr>
+                    <tr><th>Status</th><td><select name="status" id="tt_f_status">
+                        <?php foreach (Timetable::STATUS_LABELS as $value => $label) printf('<option value="%s">%s</option>', esc_attr($value), esc_html($label)); ?>
+                    </select>
+                    <p class="description">Entwürfe zeigen im Frontend einen Hinweis und haben keinen iCal-Export bzw. kein Kalender-Abo.</p></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Speichern</button>
             </form>
@@ -230,7 +235,17 @@ class View {
                 <table class="form-table">
                     <tr><th>Neuer Name</th><td><input type="text" name="new_name" id="copy_new_name" class="regular-text" maxlength="<?php echo Schema::LEN_TIMETABLE_BEZEICHNUNG; ?>" required></td></tr>
                     <tr><th>Neues Enddatum</th><td><input type="date" name="new_end_date" required><p class="description">Datum, an dem der letzte Termin der Kopie enden soll.</p></td></tr>
+                    <tr><th>Verschiebung</th><td>
+                        <label><input type="radio" name="verschiebung" value="wochen" checked> Wochentagsgenau (ganze Wochen)</label><br>
+                        <label><input type="radio" name="verschiebung" value="tage"> Exakt bis zum Enddatum (Wochentage können sich ändern)</label>
+                        <p class="description">Wochentagsgenau: Eine Konferenz am Dienstag liegt auch in der Kopie an einem Dienstag. Das Ende kann dafür bis zu 3 Tage vom gewünschten Datum abweichen.</p>
+                    </td></tr>
+                    <tr><th>Schultage</th><td>
+                        <label><input type="checkbox" name="schultage" value="1" checked> Termine in Ferien, an Feiertagen oder am Wochenende auf den nächsten Schultag legen</label>
+                        <p class="description">Nutzt die unter „Einstellungen“ hinterlegten Ferien und Feiertage.</p>
+                    </td></tr>
                 </table>
+                <p class="description">Die Kopie wird als <strong>Entwurf</strong> angelegt.</p>
                 <button type="submit" class="button button-primary">Kopie erstellen</button><button type="button" class="button mh-tt-close-btn">Abbrechen</button>
             </form>
         </div></div>
@@ -314,10 +329,22 @@ class View {
         $this->requireCapability();
         check_admin_referer('copy_timetable_nonce', 'copy_timetable_nonce');
 
-        if ($this->timetableController->copyTimetable(wp_unslash($_POST))) {
-            $this->addNotice('success', ['Die Timetable wurde kopiert.']);
-        } else {
-            $this->addNotice('error', ['Die Timetable konnte nicht kopiert werden. Hat die Vorlage überhaupt Termine, und ist das Enddatum gültig?']);
+        $result = $this->timetableController->copyTimetable(wp_unslash($_POST));
+
+        if (!$result['success']) {
+            $this->addNotice('error', ['Die Timetable konnte nicht kopiert werden: ' . $result['message']]);
+            $this->redirectTo('mh-timetable');
+        }
+
+        $this->addNotice('success', [$result['message']]);
+        if (!empty($result['verschoben'])) {
+            $this->addNotice('info', array_merge(
+                [sprintf('%d Termin(e) lagen nicht auf einem Schultag und wurden auf den nächsten Schultag gelegt:', count($result['verschoben']))],
+                $result['verschoben']
+            ));
+        }
+        if (!empty($result['warnungen'])) {
+            $this->addNotice('warning', $result['warnungen']);
         }
         $this->redirectTo('mh-timetable');
     }
@@ -330,7 +357,9 @@ class View {
         $bg = sanitize_text_field(wp_unslash($_GET['bg'] ?? ''));
 
         $timetable = $id > 0 ? $this->timetableRepository->find($id) : null;
-        if (!$timetable) {
+        // Entwürfe sind nur für die Verwaltung abrufbar – für alle anderen (auch
+        // Kalender-Abos) sieht ein Entwurf aus wie eine nicht vorhandene Zeittafel.
+        if (!$timetable || ($timetable->isEntwurf() && !current_user_can(self::CAPABILITY))) {
             wp_die('Diese Zeittafel existiert nicht.', 'Nicht gefunden', ['response' => 404]);
         }
 
@@ -345,7 +374,9 @@ class View {
 
         nocache_headers();
         header('Content-Type: text/calendar; charset=utf-8');
-        header('Content-Disposition: attachment; filename="' . $filename . '.ics"');
+        // Abo (webcal) → inline, damit Kalender-Clients den Feed direkt lesen; sonst Download
+        $disposition = isset($_GET['abo']) ? 'inline' : 'attachment';
+        header('Content-Disposition: ' . $disposition . '; filename="' . $filename . '.ics"');
         echo $content;
         exit;
     }
@@ -397,9 +428,12 @@ class View {
         $alleFerien = $this->ferienRepository->getAll(); $ferienMap = [];
         foreach ($alleFerien as $f) { $curr = clone $f->getStartdatum(); while ($curr <= $f->getEnddatum()) { $ferienMap[$curr->format('d.m.y')] = $f->getName(); $curr->modify('+1 day'); } }
         wp_enqueue_script('timetable-frontend');
+        // Entwurf: Status der Timetable; das Shortcode-Attribut entwurf="ja" bleibt aus
+        // Kompatibilitätsgründen zusätzlich wirksam.
+        $istEntwurf = $timetable->isEntwurf() || $atts['entwurf'] === 'ja';
         $frontendView = new \MH\Timetable\Viewer\TimetableFrontendView(
             $timetable,
-            (string)$atts['entwurf'],
+            $istEntwurf ? 'ja' : 'nein',
             $ferienMap,
             $this->taxonomyService->getFarbMap()
         );

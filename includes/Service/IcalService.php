@@ -18,6 +18,9 @@ class IcalService
         $ical .= "PRODID:-//MH Timetable Plugin//DE\r\n";
         $ical .= "CALSCALE:GREGORIAN\r\n";
         $ical .= "METHOD:PUBLISH\r\n";
+        // Abo-Clients (Outlook, Apple, Google) sollen alle 6 Stunden neu laden
+        $ical .= "REFRESH-INTERVAL;VALUE=DURATION:PT6H\r\n";
+        $ical .= "X-PUBLISHED-TTL:PT6H\r\n";
         $ical .= $this->foldLine("X-WR-CALNAME:" . $this->escapeString($title));
 
         foreach ($termine as $termin) {
@@ -30,13 +33,15 @@ class IcalService
 
     private function renderEvent(Termin $termin): string
     {
-        $uid = md5($termin->getId() . $termin->getBeginn()->format('Ymd'));
+        // Stabile UID: nur von der Termin-ID abhängig. So erkennen Kalender-Abos eine
+        // Datumsänderung als Aktualisierung desselben Termins statt als neuen Termin.
+        $uid = 'termin-' . (int)$termin->getId() . '@' . $this->getHost();
         $start = $termin->getBeginn()->format('Ymd');
         // iCal End-Datum ist exklusiv, daher +1 Tag für Ganztages-Events
         $ende = (clone $termin->getEnde())->modify('+1 day')->format('Ymd');
 
         $event = "BEGIN:VEVENT\r\n";
-        $event .= "UID:" . $uid . "@mh-timetable.de\r\n";
+        $event .= "UID:" . $uid . "\r\n";
         $event .= "DTSTAMP:" . gmdate('Ymd\THis\Z') . "\r\n";
         $event .= "DTSTART;VALUE=DATE:" . $start . "\r\n";
         $event .= "DTEND;VALUE=DATE:" . $ende . "\r\n";
@@ -45,6 +50,32 @@ class IcalService
         $event .= "END:VEVENT\r\n";
 
         return $event;
+    }
+
+    private function getHost(): string
+    {
+        $host = (string)wp_parse_url(home_url(), PHP_URL_HOST);
+        return $host !== '' ? $host : 'localhost';
+    }
+
+    /**
+     * Baut die URL zum Kalender einer Timetable (optional nur ein Bildungsgang).
+     *
+     * @param bool $abo true → webcal://-Link zum Abonnieren, false → https-Download
+     */
+    public static function buildUrl(int $timetableId, string $bildungsgang = '', bool $abo = false): string
+    {
+        $args = ['download_ical' => 1, 'timetable_id' => $timetableId];
+        if ($bildungsgang !== '') {
+            $args['bg'] = $bildungsgang;
+        }
+        if ($abo) {
+            $args['abo'] = 1;
+        }
+        // rawurlencode statt "+" für Leerzeichen – manche Kalender-Clients mögen kein "+"
+        $url = add_query_arg(array_map('rawurlencode', $args), home_url('/'));
+
+        return $abo ? (string)preg_replace('#^https?://#i', 'webcal://', $url) : $url;
     }
 
     /**

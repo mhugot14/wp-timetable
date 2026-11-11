@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace MH\Timetable\Viewer;
 
 use MH\Timetable\Model\Entity\Timetable;
+use MH\Timetable\Service\IcalService;
 use DateTime;
 
 class TimetableFrontendView {
@@ -64,6 +65,15 @@ class TimetableFrontendView {
 			: '';
 	$html .= '<h3>' . esc_html($this->timetable->getBezeichnung()) . $entwurfSuffix . '</h3>';
 	$html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
+	if ($this->entwurf !== 'ja') {
+		$html .= sprintf(
+			'<p class="tt-abo-hinweis"><span class="dashicons dashicons-calendar-alt"></span> '
+			. '<a href="%s">Alle Termine im Kalender abonnieren</a> · <a href="%s">als .ics herunterladen</a>'
+			. ' <small>(Abo: Outlook, Apple- und Google-Kalender übernehmen Änderungen automatisch. Einzelne Bildungsgänge: Links in der GANTT-Ansicht.)</small></p>',
+			esc_url(IcalService::buildUrl((int)$uid, '', true)),
+			esc_url(IcalService::buildUrl((int)$uid))
+		);
+	}
         // 2. Container für die Ansichten
         $html .= '<div id="tt-view-gantt-' . $uid . '" class="tt-view-container">' . $this->generiereGantt() . '</div>';
         
@@ -122,15 +132,16 @@ class TimetableFrontendView {
 				// 1. iCal-Link Logik (Nur wenn kein Entwurf)
 				$icalLink = '';
 				if ($this->entwurf !== 'ja') {
-					// Ohne zweites Argument nutzt add_query_arg die aktuelle Request-URI
-					// (relativ) – das funktioniert auch in Unterverzeichnis-Installationen.
-					$downloadUrl = add_query_arg([
-						'download_ical' => 1,
-						'timetable_id' => $this->timetable->getId(),
-						'bg' => $bg
-					]);
-
-					$icalLink = ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a>';
+					$ttId = (int)$this->timetable->getId();
+					$icalLink = sprintf(
+						' <a href="%s" class="ical-small-link" title="Termine von %s als .ics herunterladen">iCal</a>'
+						. '<span class="ical-small-link">·</span>'
+						. '<a href="%s" class="ical-small-link" title="Termine von %s im Kalender abonnieren (aktualisiert sich automatisch)">Abo</a>',
+						esc_url(IcalService::buildUrl($ttId, (string)$bg)),
+						esc_attr((string)$bg),
+						esc_url(IcalService::buildUrl($ttId, (string)$bg, true)),
+						esc_attr((string)$bg)
+					);
 				}
 
 				// 2. Filter-Slug vorbereiten (trim gegen Leerzeichen-Fehler)
