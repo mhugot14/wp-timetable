@@ -6,8 +6,10 @@ namespace MH\Timetable;
 use MH\Timetable\Model\Repository\WpdbTermineRepository;
 use MH\Timetable\Model\Repository\WpdbTimetableRepository;
 use MH\Timetable\Model\Repository\WpdbFerienRepository;
+use MH\Timetable\Model\Repository\WpdbBildungsgangRepository;
+use MH\Timetable\Model\Repository\WpdbEreignistypRepository;
 use MH\Timetable\Service\HolidayApiService;
-use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\StammdatenService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\TimetableCopyService;
 use MH\Timetable\Service\SchulkalenderService;
@@ -17,6 +19,7 @@ use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
 use MH\Timetable\Controller\FerienController;
 use MH\Timetable\Viewer\View;
+use MH\Timetable\Viewer\StammdatenAdmin;
 
 class Kernel
 {
@@ -25,19 +28,19 @@ class Kernel
         global $wpdb;
 
         // --- 1. REPOSITORIES (Zuerst! Weil alles andere davon abhängt) ---
-        $termineRepo   = new WpdbTermineRepository($wpdb);
-        $timetableRepo = new WpdbTimetableRepository($wpdb);
-        $ferienRepo    = new WpdbFerienRepository($wpdb);
+        $termineRepo      = new WpdbTermineRepository($wpdb);
+        $timetableRepo    = new WpdbTimetableRepository($wpdb);
+        $ferienRepo       = new WpdbFerienRepository($wpdb);
+        $bildungsgangRepo = new WpdbBildungsgangRepository($wpdb);
+        $ereignistypRepo  = new WpdbEreignistypRepository($wpdb);
 
         // --- 2. SERVICES (Danach! Sie brauchen oft Repositories) ---
         $holidayApi      = new HolidayApiService();
-        $taxonomyService = new TaxonomyService();
+        $stammdaten      = new StammdatenService($bildungsgangRepo, $ereignistypRepo);
         $icalService     = new IcalService();
-        
-        // Jetzt sind $timetableRepo und $termineRepo bekannt:
         $schulkalender   = new SchulkalenderService($ferienRepo);
         $copyService     = new TimetableCopyService($timetableRepo, $termineRepo, $schulkalender);
-        $fristenService  = new FristenService($schulkalender, $termineRepo);
+        $fristenService  = new FristenService($schulkalender, $termineRepo, $ereignistypRepo);
         $konfliktService = new KonfliktService($schulkalender, $fristenService, $termineRepo);
 
         // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
@@ -45,7 +48,7 @@ class Kernel
         $timetableController = new TimetableController($timetableRepo, $termineRepo, $copyService);
         $ferienController    = new FerienController($ferienRepo, $holidayApi);
 
-        // --- 4. VIEW (Orchestrator) ---
+        // --- 4. VIEWS ---
         new View(
             $terminController,
             $timetableController,
@@ -53,19 +56,18 @@ class Kernel
             $termineRepo,
             $timetableRepo,
             $ferienRepo,
-            $taxonomyService,
+            $stammdaten,
             $icalService,
             $fristenService,
             $konfliktService
         );
+        new StammdatenAdmin($stammdaten, $fristenService);
 
         // --- 5. HOOKS & AJAX ---
-        add_action('init', [$taxonomyService, 'registerTaxonomies']);
-        // Datenmigrationen brauchen die registrierten Taxonomien → danach ausführen.
         add_action('init', [\MH\Timetable\Install\Schema::class, 'maybeMigrateData'], 20);
-        add_action('wp_head', [$taxonomyService, 'generateDynamicCss']);
-        add_action('admin_head', [$taxonomyService, 'generateDynamicCss']);
-        
+        add_action('wp_head', [$stammdaten, 'generateDynamicCss']);
+        add_action('admin_head', [$stammdaten, 'generateDynamicCss']);
+
         add_action('wp_ajax_mh_tt_get_termin', [$terminController, 'getTerminDataAjax']);
         add_action('wp_ajax_mh_tt_get_timetable', [$timetableController, 'getTimetableDataAjax']);
     }

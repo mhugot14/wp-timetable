@@ -28,16 +28,16 @@ class WpdbTermineRepository implements TermineRepositoryInterface
         $this->tableName = $this->wpdb->prefix . 'tt_termine';
     }
 
-    /** SELECT mit aufgelösten Term-Namen. */
+    /** SELECT mit den aktuellen Kürzeln aus den Stammdaten-Tabellen. */
     private function baseSelect(): string
     {
-        $terms = $this->wpdb->terms;
+        $p = $this->wpdb->prefix;
         return "SELECT t.*,
-                       COALESCE(bg.name, t.bildungsgang) AS bildungsgang_name,
-                       COALESCE(et.name, t.ereignistyp)  AS ereignistyp_name
+                       COALESCE(bg.kuerzel, t.bildungsgang) AS bildungsgang_name,
+                       COALESCE(et.kuerzel, t.ereignistyp)  AS ereignistyp_name
                   FROM {$this->tableName} t
-             LEFT JOIN {$terms} bg ON bg.term_id = t.bildungsgang_id
-             LEFT JOIN {$terms} et ON et.term_id = t.ereignistyp_id";
+             LEFT JOIN {$p}tt_bildungsgang bg ON bg.id = t.bildungsgang_id
+             LEFT JOIN {$p}tt_ereignistyp  et ON et.id = t.ereignistyp_id";
     }
 
     public function find(int $id): ?Termin
@@ -162,17 +162,21 @@ class WpdbTermineRepository implements TermineRepositoryInterface
     }
 
     /**
-     * Sucht die Term-ID zu einem Namen. Legt bewusst KEINEN Term an –
-     * gelöschte Terms sollen nicht durch Kopieren alter Termine wiederkehren.
+     * Sucht die ID eines Bildungsgangs/Ereignistyps zum Kürzel. Legt bewusst
+     * nichts an – gelöschte Einträge sollen nicht durch Kopieren alter Termine
+     * wiederkehren. $art ist 'bildungsgang' oder 'ereignistyp'.
      */
-    private function resolveTermId(string $name, string $taxonomy): ?int
+    private function resolveTermId(string $kuerzel, string $art): ?int
     {
-        if ($name === '') return null;
+        if ($kuerzel === '') return null;
 
-        $key = $taxonomy . '|' . $name;
+        $key = $art . '|' . $kuerzel;
         if (!array_key_exists($key, $this->termIdCache)) {
-            $term = get_term_by('name', $name, $taxonomy);
-            $this->termIdCache[$key] = ($term && !is_wp_error($term)) ? (int)$term->term_id : null;
+            $id = $this->wpdb->get_var($this->wpdb->prepare(
+                "SELECT id FROM {$this->wpdb->prefix}tt_{$art} WHERE kuerzel = %s",
+                $kuerzel
+            ));
+            $this->termIdCache[$key] = $id ? (int)$id : null;
         }
         return $this->termIdCache[$key];
     }

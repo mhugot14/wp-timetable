@@ -5,7 +5,7 @@ namespace MH\Timetable\Viewer\ListTable;
 
 use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
-use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\StammdatenService;
 use MH\Timetable\Service\KonfliktService;
 use MH\Timetable\Model\Entity\Termin;
 use WP_List_Table;
@@ -19,7 +19,7 @@ class TermineListTable extends WP_List_Table
 
     private TerminController $terminController;
     private TimetableController $timetableController;
-    private TaxonomyService $taxonomyService;
+    private StammdatenService $stammdaten;
 	private array $timetableNames = [];
     private ?KonfliktService $konfliktService;
     /** @var array<int, string[]> Termin-ID → Hinweise */
@@ -28,7 +28,7 @@ class TermineListTable extends WP_List_Table
     public function __construct(
         TerminController $terminController,
         TimetableController $timetableController,
-        TaxonomyService $taxonomyService,
+        StammdatenService $stammdaten,
         ?KonfliktService $konfliktService = null
     ) {
         $this->konfliktService = $konfliktService;
@@ -40,7 +40,7 @@ class TermineListTable extends WP_List_Table
 
         $this->terminController = $terminController;
         $this->timetableController = $timetableController;
-        $this->taxonomyService = $taxonomyService;
+        $this->stammdaten = $stammdaten;
     }
 
     /**
@@ -194,8 +194,8 @@ class TermineListTable extends WP_List_Table
 
         $filters = $this->getFilters(get_current_user_id());
         $timetables = $this->timetableController->getTimetablesForDropdown();
-        $bildungsgaenge = $this->taxonomyService->getBildungsgaenge();
-        $ereignistypen = $this->taxonomyService->getEreignistypen();
+        $bildungsgaenge = $this->stammdaten->getBildungsgaenge();
+        $ereignistypen = $this->stammdaten->getEreignistypen();
 
         echo '<div class="alignleft actions">';
         
@@ -206,15 +206,11 @@ class TermineListTable extends WP_List_Table
         echo '</select>';
 
         echo '<select name="filter_bildungsgang"><option value="">Alle Bildungsgänge</option>';
-        foreach ($bildungsgaenge as $bg) {
-            printf('<option value="%s" %s>%s</option>', esc_attr($bg->name), selected($filters['bildungsgang'], $bg->name, false), esc_html($bg->name));
-        }
+        echo StammdatenService::optionen($bildungsgaenge, (string)$filters['bildungsgang']);
         echo '</select>';
 
         echo '<select name="filter_ereignistyp"><option value="">Alle Ereignistypen</option>';
-        foreach ($ereignistypen as $et) {
-            printf('<option value="%s" %s>%s</option>', esc_attr($et->name), selected($filters['ereignistyp'], $et->name, false), esc_html($et->name));
-        }
+        echo StammdatenService::optionen($ereignistypen, (string)$filters['ereignistyp']);
         echo '</select>';
 
         if ($this->konfliktService) {

@@ -9,7 +9,7 @@ use MH\Timetable\Controller\FerienController;
 use MH\Timetable\Model\Repository\TermineRepositoryInterface;
 use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 use MH\Timetable\Model\Repository\FerienRepositoryInterface;
-use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\StammdatenService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\FristenService;
 use MH\Timetable\Service\KonfliktService;
@@ -20,16 +20,13 @@ class View {
     /** Berechtigung für alle Verwaltungsfunktionen des Plugins. */
     public const CAPABILITY = 'manage_options';
 
-    /** Seiten-Slugs, auf denen Admin-Meldungen des Plugins angezeigt werden. */
-    private const PLUGIN_PAGES = ['mh-timetable', 'termine', 'Einstellungen'];
-
     private TerminController $terminController;
     private TimetableController $timetableController;
     private FerienController $ferienController;
     private TermineRepositoryInterface $termineRepository;
     private TimetableRepositoryInterface $timetableRepository;
     private FerienRepositoryInterface $ferienRepository;
-    private TaxonomyService $taxonomyService;
+    private StammdatenService $stammdaten;
     private IcalService $icalService;
     private FristenService $fristenService;
     private KonfliktService $konfliktService;
@@ -41,7 +38,7 @@ class View {
         TermineRepositoryInterface $termineRepository,
         TimetableRepositoryInterface $timetableRepository,
         FerienRepositoryInterface $ferienRepository,
-        TaxonomyService $taxonomyService,
+        StammdatenService $stammdaten,
         IcalService $icalService,
         FristenService $fristenService,
         KonfliktService $konfliktService
@@ -54,7 +51,7 @@ class View {
         $this->termineRepository = $termineRepository;
         $this->timetableRepository = $timetableRepository;
         $this->ferienRepository = $ferienRepository;
-        $this->taxonomyService = $taxonomyService;
+        $this->stammdaten = $stammdaten;
         $this->icalService = $icalService;
         $this->initHooks();
     }
@@ -105,7 +102,7 @@ class View {
     public function renderTerminePage(): void {
         echo '<div class="wrap"><h1 class="wp-heading-inline">Terminübersicht</h1>';
         echo '<button class="page-title-action mh-tt-add-btn">+ Neuen Termin anlegen</button><hr class="wp-header-end">';
-        $table = new \MH\Timetable\Viewer\ListTable\TermineListTable($this->terminController, $this->timetableController, $this->taxonomyService, $this->konfliktService);
+        $table = new \MH\Timetable\Viewer\ListTable\TermineListTable($this->terminController, $this->timetableController, $this->stammdaten, $this->konfliktService);
         echo '<form method="get"><input type="hidden" name="page" value="termine">';
         $table->prepare_items();
         $table->display();
@@ -116,8 +113,8 @@ class View {
 
     public function renderEinstellungen(): void {
         echo '<div class="wrap"><h1>Einstellungen</h1>';
-        echo '<h2>Taxonomien</h2><ul><li><a href="edit-tags.php?taxonomy=bildungsgang" class="button">Bildungsgänge verwalten</a></li> ';
-        echo '<li><a href="edit-tags.php?taxonomy=ereignistyp" class="button">Ereignistypen verwalten</a></li></ul>';
+        echo '<h2>Stammdaten</h2><ul><li><a href="' . esc_url(admin_url('admin.php?page=mh-tt-bildungsgaenge')) . '" class="button">Bildungsgänge verwalten</a></li> ';
+        echo '<li><a href="' . esc_url(admin_url('admin.php?page=mh-tt-ereignistypen')) . '" class="button">Ereignistypen verwalten</a></li></ul>';
         echo '<h2>Ferien & Feiertage</h2>';
         $this->renderFerienForm();
         $ferienTable = new \MH\Timetable\Viewer\ListTable\FerienListTable($this->ferienController);
@@ -132,7 +129,7 @@ class View {
     private function renderFristen(): void
     {
         $regeln = $this->fristenService->getRegeln();
-        $typen = $this->taxonomyService->getEreignistypen();
+        $typen = $this->stammdaten->getEreignistypen();
         $postUrl = esc_url(admin_url('admin-post.php'));
         ?>
         <h2 id="fristen">Abhängige Fristen</h2>
@@ -164,7 +161,7 @@ class View {
                 <p>
                     <select name="abhaengig_id" required>
                         <option value="">– Ereignistyp –</option>
-                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->term_id, esc_html($t->name)); ?>
+                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->getId(), esc_html($t->getKuerzel())); ?>
                     </select>
                     <select name="richtung">
                         <option value="vor">endet spätestens</option>
@@ -174,7 +171,7 @@ class View {
                     <span class="mh-tt-richtung-text">vor Beginn / nach Ende von</span>
                     <select name="bezug_id" required>
                         <option value="">– Ereignistyp –</option>
-                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->term_id, esc_html($t->name)); ?>
+                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->getId(), esc_html($t->getKuerzel())); ?>
                     </select>
                 </p>
                 <p class="description">Beispiele: „NE endet spätestens 3 Schultage vor Beginn von ZK“ · „ZA beginnt frühestens 1 Schultag nach Ende von ZK“.
@@ -215,18 +212,9 @@ class View {
 
     // --- Admin-Meldungen ---
 
-    /**
-     * Merkt sich eine Meldung für den nächsten Seitenaufruf des aktuellen Users
-     * (Post/Redirect/Get – die Meldung überlebt den Redirect).
-     *
-     * @param string   $type     success | error | warning | info
-     * @param string[] $messages
-     */
+    /** @see AdminNotices::add() */
     private function addNotice(string $type, array $messages): void {
-        $key = 'mh_tt_notices_' . get_current_user_id();
-        $notices = get_transient($key) ?: [];
-        $notices[] = ['type' => $type, 'messages' => array_values($messages)];
-        set_transient($key, $notices, 5 * MINUTE_IN_SECONDS);
+        AdminNotices::add($type, $messages);
     }
 
     /** Wandelt ein Fehler-Array ['feld' => ['Text', ...]] in eine flache Liste um. */
@@ -237,25 +225,7 @@ class View {
     }
 
     public function renderAdminNotices(): void {
-        if (!in_array($_GET['page'] ?? '', self::PLUGIN_PAGES, true)) return;
-
-        $key = 'mh_tt_notices_' . get_current_user_id();
-        $notices = get_transient($key);
-        if (empty($notices)) return;
-        delete_transient($key);
-
-        foreach ($notices as $notice) {
-            $type = in_array($notice['type'], ['success', 'error', 'warning', 'info'], true) ? $notice['type'] : 'info';
-            echo '<div class="notice notice-' . esc_attr($type) . ' is-dismissible">';
-            if (count($notice['messages']) === 1) {
-                echo '<p>' . esc_html($notice['messages'][0]) . '</p>';
-            } else {
-                echo '<ul style="list-style:disc; margin-left:20px;">';
-                foreach ($notice['messages'] as $msg) echo '<li>' . esc_html($msg) . '</li>';
-                echo '</ul>';
-            }
-            echo '</div>';
-        }
+        AdminNotices::render();
     }
 
     private function redirectTo(string $page): void {
@@ -271,7 +241,7 @@ class View {
 
     // --- Modals ---
     private function renderModalContainer(): void {
-        $ereignistypen = $this->taxonomyService->getEreignistypen();
+        $ereignistypen = $this->stammdaten->getEreignistypen();
         $timetables = $this->timetableController->getTimetablesForDropdown();
         ?>
         <div id="mh-tt-modal" class="mh-tt-modal" style="display:none;"><div class="mh-tt-modal-content">
@@ -284,12 +254,12 @@ class View {
                         <?php foreach ($timetables as $tt) printf('<option value="%d">%d | %s</option>', $tt['id'], $tt['id'], esc_html($tt['bezeichnung'])); ?>
                     </select></td></tr>
                     <tr><th>Bildungsgang</th><td><select name="bildungsgang" id="f_bildungsgang" required><option value="">-- wählen --</option>
-                        <?php foreach ($this->taxonomyService->getBildungsgaenge() as $bg) printf('<option value="%s">%s</option>', esc_attr($bg->name), esc_html($bg->name)); ?>
+                        <?php echo StammdatenService::optionen($this->stammdaten->getBildungsgaenge()); ?>
                     </select></td></tr>
                     <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" maxlength="<?php echo Schema::LEN_TERMIN_BEZEICHNUNG; ?>" required></td></tr>
                     <tr><th>Ereignistyp</th><td><select name="ereignistyp" id="f_ereignistyp" required>
                                   <option value="">-- wählen --</option>
-                        <?php foreach ($ereignistypen as $et) printf('<option value="%s">%s</option>', esc_attr($et->name), esc_html($et->name)); ?>
+                        <?php echo StammdatenService::optionen($ereignistypen); ?>
                     </select></td></tr>
                     <tr><th>Zeitraum</th><td>Von: <input type="date" name="beginn" id="f_beginn" required> Bis: <input type="date" name="ende" id="f_ende" required></td></tr>
                     <tr><th>Verantwortlich</th><td><input type="text" name="verantwortlich" id="f_verantwortlich" class="regular-text" maxlength="<?php echo Schema::LEN_TERMIN_VERANTWORTLICH; ?>"></td></tr>
@@ -488,7 +458,7 @@ class View {
     // --- Assets ---
     /** Lädt Admin-Assets nur auf den Plugin-Seiten. */
     private function isPluginAdminPage(): bool {
-        return in_array($_GET['page'] ?? '', self::PLUGIN_PAGES, true);
+        return AdminNotices::isPluginPage();
     }
 
     public function adminJavascript(): void {
@@ -539,7 +509,7 @@ class View {
             $timetable,
             $istEntwurf ? 'ja' : 'nein',
             $ferienMap,
-            $this->taxonomyService->getFarbMap()
+            $this->stammdaten->getFarbMap()
         );
         return $frontendView->render();
     }

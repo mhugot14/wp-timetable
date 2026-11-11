@@ -5,6 +5,7 @@ namespace MH\Timetable\Service;
 
 use MH\Timetable\Model\Entity\Termin;
 use MH\Timetable\Model\Repository\TermineRepositoryInterface;
+use MH\Timetable\Model\Repository\WpdbEreignistypRepository;
 use DateTime;
 
 /**
@@ -17,7 +18,7 @@ use DateTime;
  * Termine (NE, ZA) mit: Ihr Abstand in Schultagen bleibt erhalten, unterschreitet
  * aber nie den Mindestabstand der Regel. Das setzt sich über Regelketten fort.
  *
- * Die Regeln liegen als Option mit Term-IDs – Umbenennungen der Typen sind egal.
+ * Die Regeln liegen als Option mit Ereignistyp-IDs – Umbenennungen sind egal.
  */
 class FristenService
 {
@@ -26,11 +27,41 @@ class FristenService
 
     private SchulkalenderService $kalender;
     private TermineRepositoryInterface $termineRepo;
+    private WpdbEreignistypRepository $ereignistypen;
 
-    public function __construct(SchulkalenderService $kalender, TermineRepositoryInterface $termineRepo)
+    public function __construct(SchulkalenderService $kalender, TermineRepositoryInterface $termineRepo, WpdbEreignistypRepository $ereignistypen)
     {
         $this->kalender = $kalender;
         $this->termineRepo = $termineRepo;
+        $this->ereignistypen = $ereignistypen;
+    }
+
+    /**
+     * Nach dem Zusammenführen zweier Ereignistypen: Regeln von $quelleId auf $zielId
+     * umstellen. Regeln, die dadurch sinnlos (Typ hängt von sich selbst ab) oder
+     * doppelt würden, entfallen.
+     * @return string[] Meldungen über entfallene Regeln
+     */
+    public function ersetzeEreignistyp(int $quelleId, int $zielId): array
+    {
+        $meldungen = [];
+        $neu = [];
+        $schluessel = [];
+        foreach ((array)get_option(self::OPTION, []) as $regel) {
+            foreach (['abhaengig_id', 'bezug_id'] as $feld) {
+                if ((int)$regel[$feld] === $quelleId) $regel[$feld] = $zielId;
+            }
+            $key = $regel['abhaengig_id'] . '>' . $regel['bezug_id'];
+            $umgekehrt = $regel['bezug_id'] . '>' . $regel['abhaengig_id'];
+            if ((int)$regel['abhaengig_id'] === (int)$regel['bezug_id'] || isset($schluessel[$key]) || isset($schluessel[$umgekehrt])) {
+                $meldungen[] = 'Eine Fristen-Regel entfällt, weil sie nach dem Zusammenführen doppelt oder widersprüchlich wäre.';
+                continue;
+            }
+            $schluessel[$key] = true;
+            $neu[] = $regel;
+        }
+        update_option(self::OPTION, $neu, false);
+        return $meldungen;
     }
 
     // --- Regelverwaltung -------------------------------------------------
@@ -44,13 +75,13 @@ class FristenService
     {
         $regeln = [];
         foreach ((array)get_option(self::OPTION, []) as $regel) {
-            $a = get_term((int)($regel['abhaengig_id'] ?? 0), 'ereignistyp');
-            $b = get_term((int)($regel['bezug_id'] ?? 0), 'ereignistyp');
-            if (!$a || is_wp_error($a) || !$b || is_wp_error($b)) {
+            $a = $this->ereignistypen->find((int)($regel['abhaengig_id'] ?? 0));
+            $b = $this->ereignistypen->find((int)($regel['bezug_id'] ?? 0));
+            if (!$a || !$b) {
                 continue;
             }
-            $regel['abhaengig'] = $a->name;
-            $regel['bezug'] = $b->name;
+            $regel['abhaengig'] = $a->getKuerzel();
+            $regel['bezug'] = $b->getKuerzel();
             $regeln[] = $regel;
         }
         return $regeln;
@@ -83,6 +114,15 @@ class FristenService
         ];
         update_option(self::OPTION, $regeln, false);
         return null;
+    }
+
+    /** Entfernt alle Regeln, die einen (gelöschten) Ereignistyp verwenden. @return int Anzahl */
+    public function entferneEreignistyp(int $ereignistypId): int
+    {
+        $regeln = (array)get_option(self::OPTION, []);
+        $neu = array_values(array_filter($regeln, fn($r) => (int)$r['abhaengig_id'] !== $ereignistypId && (int)$r['bezug_id'] !== $ereignistypId));
+        update_option(self::OPTION, $neu, false);
+        return count($regeln) - count($neu);
     }
 
     public function deleteRegel(string $id): bool
