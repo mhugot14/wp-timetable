@@ -201,8 +201,10 @@ class TermineListTable extends WP_List_Table
         );
 
         return sprintf(
-            '<a href="#" class="button mh-tt-edit-btn" data-id="%d">Bearbeiten</a> ' .
-            '<a href="%s" class="button" onclick="return confirm(\'Wirklich löschen?\')">Löschen</a>',
+            '<div class="mh-tt-aktionen">' .
+            '<a href="#" class="button button-small mh-tt-edit-btn" data-id="%d">Bearbeiten</a>' .
+            '<a href="%s" class="button button-small mh-tt-btn-loeschen" onclick="return confirm(\'Wirklich löschen?\')">Löschen</a>' .
+            '</div>',
             $item->getId(),
             esc_url($deleteUrl)
         );

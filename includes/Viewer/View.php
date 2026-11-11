@@ -162,7 +162,7 @@ class View {
                 ?>
                 <tr>
                     <td><?php echo esc_html($this->fristenService->beschreibe($regel)); ?></td>
-                    <td><a href="<?php echo esc_url($deleteUrl); ?>" class="button" onclick="return confirm('Regel wirklich löschen?')">Löschen</a></td>
+                    <td><div class="mh-tt-aktionen"><a href="<?php echo esc_url($deleteUrl); ?>" class="button button-small mh-tt-btn-loeschen" onclick="return confirm('Regel wirklich löschen?')">Löschen</a></div></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

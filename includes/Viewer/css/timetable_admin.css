@@ -55,3 +55,29 @@
 .holiday { background-color: #ffeb3b !important; }
 .weekend { background-color: #f5f5f5 !important; }
 .today { border: 2px solid #2271b1 !important; }
+/* Einheitliche Aktions-Knöpfe in allen Listen (seit 0.9.2) */
+.mh-tt-aktionen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+.mh-tt-aktionen .button.button-small {
+    margin: 0;
+    min-width: 84px;
+    text-align: center;
+}
+.mh-tt-aktionen .button.mh-tt-btn-loeschen {
+    color: #b32d2e;
+    border-color: #b32d2e;
+}
+.mh-tt-aktionen .button.mh-tt-btn-loeschen:hover,
+.mh-tt-aktionen .button.mh-tt-btn-loeschen:focus {
+    color: #fff;
+    background: #b32d2e;
+    border-color: #b32d2e;
+}
+/* Spalte „Aktionen“ breit genug für drei Knöpfe nebeneinander */
+.wp-list-table th.column-actions,
+.wp-list-table td.column-actions {
+    width: 290px;
+}

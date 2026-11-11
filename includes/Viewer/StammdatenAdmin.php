@@ -79,12 +79,12 @@ class StammdatenAdmin
                     <td><?php echo esc_html(implode(', ', array_map([$this, 'userName'], $eintrag->getBgaUserIds()))); ?></td>
                     <td><?php echo $n; ?></td>
                     <td><?php echo $eintrag->isAktiv() ? 'aktiv' : 'inaktiv'; ?></td>
-                    <td>
-                        <?php echo AdminModal::button('mh-tt-bg-modal', 'Bearbeiten', $werte, 'Bildungsgang bearbeiten: ' . $eintrag->getKuerzel(), 'button', $autoId === $id); ?>
+                    <td><div class="mh-tt-aktionen">
+                        <?php echo AdminModal::button('mh-tt-bg-modal', 'Bearbeiten', $werte, 'Bildungsgang bearbeiten: ' . $eintrag->getKuerzel(), 'button button-small', $autoId === $id); ?>
                         <?php if ($n === 0): ?>
-                            <a class="button" onclick="return confirm('Bildungsgang wirklich löschen?')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_bildungsgang&id=' . $id), 'mh_tt_delete_bg_' . $id)); ?>">Löschen</a>
+                            <a class="button button-small mh-tt-btn-loeschen" onclick="return confirm('Bildungsgang wirklich löschen?')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_bildungsgang&id=' . $id), 'mh_tt_delete_bg_' . $id)); ?>">Löschen</a>
                         <?php endif; ?>
-                    </td>
+                    </div></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>
@@ -203,12 +203,12 @@ class StammdatenAdmin
                     <td><?php echo esc_html($eintrag->getBezeichnung()); ?></td>
                     <td><?php echo $n; ?></td>
                     <td><?php echo $eintrag->isAktiv() ? 'aktiv' : 'inaktiv'; ?></td>
-                    <td>
-                        <?php echo AdminModal::button('mh-tt-et-modal', 'Bearbeiten', $werte, 'Ereignistyp bearbeiten: ' . $eintrag->getKuerzel(), 'button', $autoId === $id); ?>
+                    <td><div class="mh-tt-aktionen">
+                        <?php echo AdminModal::button('mh-tt-et-modal', 'Bearbeiten', $werte, 'Ereignistyp bearbeiten: ' . $eintrag->getKuerzel(), 'button button-small', $autoId === $id); ?>
                         <?php if ($n === 0): ?>
-                            <a class="button" onclick="return confirm('Ereignistyp wirklich löschen? Fristen-Regeln mit diesem Typ werden ebenfalls gelöscht.')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_ereignistyp&id=' . $id), 'mh_tt_delete_et_' . $id)); ?>">Löschen</a>
+                            <a class="button button-small mh-tt-btn-loeschen" onclick="return confirm('Ereignistyp wirklich löschen? Fristen-Regeln mit diesem Typ werden ebenfalls gelöscht.')" href="<?php echo esc_url(wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_ereignistyp&id=' . $id), 'mh_tt_delete_et_' . $id)); ?>">Löschen</a>
                         <?php endif; ?>
-                    </td>
+                    </div></td>
                 </tr>
             <?php endforeach; ?>
             </tbody>

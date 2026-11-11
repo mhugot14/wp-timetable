@@ -107,7 +107,7 @@ class FerienListTable extends WP_List_Table
         ));
 
         return sprintf(
-            '<a href="%s" class="button" onclick="return confirm(\'Eintrag wirklich löschen?\')">Löschen</a>',
+            '<div class="mh-tt-aktionen"><a href="%s" class="button button-small mh-tt-btn-loeschen" onclick="return confirm(\'Eintrag wirklich löschen?\')">Löschen</a></div>',
             esc_url($url)
         );
     }

@@ -79,11 +79,16 @@ class TimetableFrontendView {
         $html .= '</div></div>';
 
         // 2. Kopf
-        $entwurfSuffix = ($this->entwurf === 'ja')
-            ? ' <span class="tt-entwurf-badge">(Entwurf - noch nicht verbindlich)</span>'
-            : '';
-        $html .= '<h3>' . esc_html($this->timetable->getBezeichnung()) . $entwurfSuffix . '</h3>';
+        $istEntwurf = $this->entwurf === 'ja';
+        $html .= '<h3 class="tt-titel">' . esc_html($this->timetable->getBezeichnung())
+            . ($istEntwurf ? ' <span class="tt-entwurf-badge"><span class="dashicons dashicons-edit-page" aria-hidden="true"></span>Entwurf</span>' : '')
+            . '</h3>';
         $html .= '<p>' . esc_html($this->timetable->getBeschreibung()) . '</p>';
+        if ($istEntwurf) {
+            $html .= '<div class="tt-entwurf-hinweis" role="note"><span class="dashicons dashicons-info-outline" aria-hidden="true"></span>'
+                . '<span><strong>Noch nicht verbindlich.</strong> Dieser Terminplan ist ein Entwurf – Termine können sich noch ändern. '
+                . 'Kalender-Abo und iCal-Download stehen nach der Veröffentlichung zur Verfügung.</span></div>';
+        }
         if ($this->entwurf !== 'ja' && !empty($termine)) {
             $html .= sprintf(
                 '<p class="tt-abo-hinweis"><span class="dashicons dashicons-calendar-alt"></span> '
