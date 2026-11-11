@@ -550,7 +550,15 @@ class View {
         $timetable = $this->timetableRepository->find($id); if (!$timetable) return '<p>Nicht gefunden.</p>';
         $termine = $this->termineRepository->getByTimetableId($id); $timetable->setTermine($termine);
         $alleFerien = $this->ferienRepository->getAll(); $ferienMap = [];
-        foreach ($alleFerien as $f) { $curr = clone $f->getStartdatum(); while ($curr <= $f->getEnddatum()) { $ferienMap[$curr->format('d.m.y')] = $f->getName(); $curr->modify('+1 day'); } }
+        // Tages-Map (für Raster/Tooltips) und Zeiträume (für Ferienbänder im Zeitplan).
+        // Ferien zuerst, damit Feiertage innerhalb der Ferien den Tagesnamen bestimmen.
+        usort($alleFerien, fn($a, $b) => [$a->istFeiertag(), $a->getStartdatum()] <=> [$b->istFeiertag(), $b->getStartdatum()]);
+        $ferienListe = [];
+        foreach ($alleFerien as $f) {
+            $curr = clone $f->getStartdatum();
+            while ($curr <= $f->getEnddatum()) { $ferienMap[$curr->format('d.m.y')] = $f->getAnzeigename(); $curr->modify('+1 day'); }
+            $ferienListe[] = ['name' => $f->getAnzeigename(), 'start' => $f->getStartdatum()->format('Y-m-d'), 'ende' => $f->getEnddatum()->format('Y-m-d'), 'feiertag' => $f->istFeiertag()];
+        }
         wp_enqueue_script('timetable-frontend');
         // Entwurf: Status der Timetable; das Shortcode-Attribut entwurf="ja" bleibt aus
         // Kompatibilitätsgründen zusätzlich wirksam.
@@ -562,9 +570,9 @@ class View {
             $this->stammdaten->getFarbMap(),
             $this->editorKonfiguration(),
             $this->stammdaten->getBezeichnungMap(),
-            (function () use ($atts) {
+            (function () use ($atts, $ferienListe) {
                 $a = AnsichtenEinstellungen::fuerShortcode((string)$atts['ansichten'], (string)$atts['standard']);
-                return ['ansichten' => $a['aktiv'], 'standard' => $a['standard'], 'bg_bezeichnungen' => $this->stammdaten->getBildungsgangBezeichnungMap()];
+                return ['ansichten' => $a['aktiv'], 'standard' => $a['standard'], 'bg_bezeichnungen' => $this->stammdaten->getBildungsgangBezeichnungMap(), 'ferien_liste' => $ferienListe];
             })()
         );
         return $frontendView->render();

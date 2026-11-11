@@ -21,8 +21,9 @@ class WpdbFerienRepository implements FerienRepositoryInterface
     public function exists(Ferien $ferien): bool
     {
         $count = $this->wpdb->get_var($this->wpdb->prepare(
-            "SELECT COUNT(*) FROM {$this->tableName} WHERE name = %s AND startdatum = %s AND enddatum = %s AND typ = %s",
-            $ferien->getName(),
+            // Dublette = gleicher Zeitraum und Typ (der Name kann sich unterscheiden,
+            // z. B. Rohname aus der API vs. bereinigter Name)
+            "SELECT COUNT(*) FROM {$this->tableName} WHERE startdatum = %s AND enddatum = %s AND typ = %s",
             $ferien->getStartdatum()->format('Y-m-d'),
             $ferien->getEnddatum()->format('Y-m-d'),
             $ferien->getTyp()

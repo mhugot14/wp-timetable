@@ -78,7 +78,7 @@ class FerienController
         foreach ($ferienRaw as $item) {
             try {
                 $ferien = new Ferien(
-                    (string)$item['name'],
+                    Ferien::anzeigeName((string)$item['name']), // „weihnachtsferien nordrhein-westfalen 2025“ → „Weihnachtsferien“
                     new DateTime($item['start']),
                     new DateTime($item['end']),
                     'Ferien'

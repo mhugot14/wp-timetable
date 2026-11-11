@@ -951,3 +951,36 @@
     .tt-zp-scroll { overflow: visible; }
     .tt-zp-label, .tt-zp-ecke { position: static; box-shadow: none; }
 }
+
+/* Zeitplan 0.10.1: feste Bildungsgang-Spalte, gekürzte Texte, Feiertage */
+.tt-zp-label,
+.tt-zp-ecke {
+    width: var(--tt-label);
+    min-width: var(--tt-label);       /* Flex-Elemente schrumpfen sonst nicht unter ihre Textbreite */
+    max-width: var(--tt-label);
+    overflow: hidden;
+}
+.tt-zp-bg-lang {
+    white-space: normal;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;           /* lange Langnamen: höchstens zwei Zeilen */
+    -webkit-box-orient: vertical;
+    line-height: 1.3;
+}
+.tt-zp-balken.text-aussen .tt-zp-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.tt-zp-tag.is-feiertag::after {
+    content: "";
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    width: 5px;
+    height: 5px;
+    margin-left: -2.5px;
+    border-radius: 50%;
+    background: #d63638;
+}
+.tt-zp-tag.is-feiertag { color: #b32d2e; }
+.tt-zp-tag.is-heute.is-feiertag::after { background: #fff; }

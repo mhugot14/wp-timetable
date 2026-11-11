@@ -42,9 +42,15 @@ class ZeitplanFrontendView
     /** @var string[] */
     private array $editierbareBgs;
     private bool $entwurf;
+    /** @var array<int,array{name:string,start:string,ende:string,feiertag:bool}> Ferien-Zeiträume für die Bänder */
+    private array $ferienListe;
 
-    public function __construct(Timetable $timetable, array $ferien, array $farben, array $typNamen, array $bgNamen, array $editierbareBgs, bool $entwurf)
+    /** Mindestens so viel Text muss sichtbar bleiben, bevor statt Kürzen eine neue Spur entsteht */
+    private const MIN_TEXT_PX = 70;
+
+    public function __construct(Timetable $timetable, array $ferien, array $farben, array $typNamen, array $bgNamen, array $editierbareBgs, bool $entwurf, array $ferienListe = [])
     {
+        $this->ferienListe = $ferienListe;
         $this->timetable = $timetable;
         $this->ferien = $ferien;
         $this->farben = $farben;
@@ -105,6 +111,11 @@ class ZeitplanFrontendView
         $laufMonat = null; $monatStart = 0;
         $laufFerien = null; $ferienStart = 0;
         $n = count($tage);
+        $feiertage = $this->feiertagsMap();
+        $mitListe = !empty($this->ferienListe);
+        if ($mitListe) {
+            $ferienBaender = $this->ferienBaenderAusListe($tage[0], $n);
+        }
 
         foreach ($tage as $i => $t) {
             // Monate
@@ -124,20 +135,27 @@ class ZeitplanFrontendView
             $klassen = ['tt-zp-tag'];
             if ((int)$t->format('N') >= 6) $klassen[] = 'is-wochenende';
             if (isset($this->ferien[$t->format('d.m.y')])) $klassen[] = 'is-ferien';
+            $feiertag = $feiertage[$t->format('Y-m-d')] ?? null;
+            if ($feiertag !== null) $klassen[] = 'is-feiertag';
             if ($t->format('Y-m-d') === (new DateTime('today'))->format('Y-m-d')) $klassen[] = 'is-heute';
+            $titel = $feiertag ?? ($this->ferien[$t->format('d.m.y')] ?? '');
             $tagZeile .= sprintf(
-                '<div class="%s" style="left:%dpx"><span>%s</span>%s</div>',
-                implode(' ', $klassen), $i * self::TAG_PX, self::WOCHENTAGE[(int)$t->format('N')], $t->format('j')
+                '<div class="%s" style="left:%dpx"%s><span>%s</span>%s</div>',
+                implode(' ', $klassen), $i * self::TAG_PX,
+                $titel !== '' ? ' title="' . esc_attr($titel) . '"' : '',
+                self::WOCHENTAGE[(int)$t->format('N')], $t->format('j')
             );
-            // Ferienbänder (zusammenhängende Tage mit gleichem Namen)
-            $f = $this->ferien[$t->format('d.m.y')] ?? null;
-            if ($f !== $laufFerien) {
-                if ($laufFerien !== null) $ferienBaender .= $this->ferienBand($laufFerien, $ferienStart, $i);
-                $laufFerien = $f; $ferienStart = $i;
+            // Ohne Zeitraum-Liste: Bänder aus zusammenhängenden Tagen gleichen Namens
+            if (!$mitListe) {
+                $f = $this->ferien[$t->format('d.m.y')] ?? null;
+                if ($f !== $laufFerien) {
+                    if ($laufFerien !== null) $ferienBaender .= $this->ferienBand($laufFerien, $ferienStart, $i);
+                    $laufFerien = $f; $ferienStart = $i;
+                }
             }
         }
         $monate .= $this->monatsBlock((string)$laufMonat, $monatStart, $n);
-        if ($laufFerien !== null) $ferienBaender .= $this->ferienBand($laufFerien, $ferienStart, $n);
+        if (!$mitListe && $laufFerien !== null) $ferienBaender .= $this->ferienBand($laufFerien, $ferienStart, $n);
 
         return '<div class="tt-zp-kopf">'
             . '<div class="tt-zp-ecke">Bildungsgang</div>'
@@ -154,6 +172,43 @@ class ZeitplanFrontendView
         $tage = $bis - $von;
         $label = $tage >= 6 ? self::MONATE[(int)$monat] . ' ' . $jahr : mb_substr(self::MONATE[(int)$monat], 0, 3) . '.';
         return sprintf('<div class="tt-zp-monat" style="left:%dpx; width:%dpx"><span>%s</span></div>', $von * self::TAG_PX, $tage * self::TAG_PX, esc_html($label));
+    }
+
+    /**
+     * Ein Band je Ferien-Zeitraum (Feiertage innerhalb der Ferien zerteilen es nicht).
+     * Feiertage bekommen kein Band, sondern eine Markierung am Tag.
+     */
+    private function ferienBaenderAusListe(DateTime $erster, int $anzahlTage): string
+    {
+        $html = '';
+        foreach ($this->ferienListe as $f) {
+            if (!empty($f['feiertag'])) continue;
+            $von = $this->tagIndex($erster, $f['start']);
+            $bis = $this->tagIndex($erster, $f['ende']) + 1;
+            if ($bis <= 0 || $von >= $anzahlTage) continue;          // außerhalb des Plans
+            $html .= $this->ferienBand((string)$f['name'], max(0, $von), min($anzahlTage, $bis));
+        }
+        return $html;
+    }
+
+    /** @return array<string,string> Y-m-d → Name des Feiertags */
+    private function feiertagsMap(): array
+    {
+        $map = [];
+        foreach ($this->ferienListe as $f) {
+            if (empty($f['feiertag'])) continue;
+            for ($d = new DateTime($f['start']); $d <= new DateTime($f['ende']); $d->modify('+1 day')) {
+                $map[$d->format('Y-m-d')] = (string)$f['name'];
+            }
+        }
+        return $map;
+    }
+
+    private function tagIndex(DateTime $erster, string $datum): int
+    {
+        $d = new DateTime($datum);
+        $tage = (int)$erster->diff($d)->days;
+        return $d < $erster ? -$tage : $tage;
     }
 
     private function ferienBand(string $name, int $von, int $bis): string
@@ -250,7 +305,8 @@ class ZeitplanFrontendView
     {
         usort($termine, fn(Termin $a, Termin $b) => [$a->getBeginn(), $a->getEnde()] <=> [$b->getBeginn(), $b->getEnde()]);
 
-        $spurEnden = [];
+        // Je Spur: Ende des letzten Balkens, Ende seines Textes, Textanfang, Index im Ergebnis
+        $spuren = [];
         $ergebnis = [];
         foreach ($termine as $t) {
             $links = (int)$start->diff($t->getBeginn())->days * self::TAG_PX;
@@ -259,37 +315,61 @@ class ZeitplanFrontendView
             $stichtag = $tage === 1;
 
             [$haupt, $neben] = $this->beschriftung($t);
-            $textPx = $this->textBreite($haupt . ($neben !== '' ? ' · ' . $neben : ''));
-            $innen = !$stichtag && $textPx + 16 <= $breite;
-            $belegtBis = $links + $breite + ($innen ? 0 : 6 + $textPx) + 10;
+            $textPx = $this->textBreite($haupt, $neben);
+            // Text innen, wenn er passt – bei breiten Balken auch gekürzt innen (Tooltip zeigt alles)
+            $innen = !$stichtag && ($textPx + 16 <= $breite || $breite >= 90);
+            $textStart = $links + $breite + 6;
+            $belegtBis = $innen ? $links + $breite + 4 : $textStart + $textPx + 10;
 
-            $spur = 0;
-            while (isset($spurEnden[$spur]) && $spurEnden[$spur] > $links) {
-                $spur++;
+            // Passende Spur suchen: entweder frei, oder der Text des Vorgängers lässt
+            // sich so kürzen, dass noch genug davon lesbar bleibt.
+            $gewaehlt = null;
+            foreach ($spuren as $nr => $s) {
+                if ($s['belegtBis'] <= $links) { $gewaehlt = $nr; break; }
+                if ($s['textStart'] !== null && $s['balkenEnde'] + 4 <= $links && $links - 8 - $s['textStart'] >= self::MIN_TEXT_PX) {
+                    $ergebnis[$s['idx']]['textMax'] = $links - 8 - $s['textStart'];
+                    $gewaehlt = $nr;
+                    break;
+                }
             }
-            $spurEnden[$spur] = $belegtBis;
+            if ($gewaehlt === null) $gewaehlt = count($spuren);
 
-            $ergebnis[] = compact('t', 'links', 'breite', 'stichtag', 'haupt', 'neben', 'innen', 'spur');
+            $ergebnis[] = [
+                't' => $t, 'links' => $links, 'breite' => $breite, 'stichtag' => $stichtag,
+                'haupt' => $haupt, 'neben' => $neben, 'innen' => $innen, 'spur' => $gewaehlt, 'textMax' => null,
+            ];
+            $spuren[$gewaehlt] = [
+                'belegtBis'  => $belegtBis,
+                'balkenEnde' => $links + $breite,
+                'textStart'  => $innen ? null : $textStart,
+                'idx'        => count($ergebnis) - 1,
+            ];
         }
-        return [$ergebnis, count($spurEnden)];
+        return [$ergebnis, count($spuren)];
     }
 
     /** @return array{0:string,1:string} [ausgeschriebener Typ, Bezeichnung (falls zusätzlich informativ)] */
     private function beschriftung(Termin $t): array
     {
         $typ = $t->getEreignistyp();
-        $haupt = trim($this->typNamen[$typ] ?? '') ?: $typ;
-        $haupt = rtrim($haupt, '.');
-        $bez = trim($t->getBezeichnung());
-        // Bezeichnung nur zeigen, wenn sie mehr sagt als der Typ
-        $neben = ($bez !== '' && mb_stripos($bez, $haupt) === false && mb_strtolower($bez) !== mb_strtolower($typ)) ? $bez : '';
-        return [$haupt, $neben];
+        $haupt = rtrim(trim($this->typNamen[$typ] ?? '') ?: $typ, '. ');
+        $bez = rtrim(trim($t->getBezeichnung()), '. ');
+        // Bezeichnung nur zeigen, wenn sie mehr sagt als der Typ – auch nicht,
+        // wenn eins im anderen steckt („Zeugniskonferenz“ vs. „Zeugniskonferenzen“)
+        $n = fn(string $s) => mb_strtolower(trim($s));
+        $doppelt = $bez === ''
+            || $n($bez) === $n($typ)
+            || mb_strpos($n($bez), $n($haupt)) !== false
+            || mb_strpos($n($haupt), $n($bez)) !== false;
+        return [$haupt, $doppelt ? '' : $bez];
     }
 
-    /** Grobe Schätzung der Textbreite (12–13px Systemschrift) */
-    private function textBreite(string $text): int
+    /** Geschätzte Textbreite: fetter Haupttext (12px, 600) + normaler Zusatz */
+    private function textBreite(string $haupt, string $neben = ''): int
     {
-        return (int)ceil(mb_strlen($text) * 6.6);
+        $px = mb_strlen($haupt) * 7.3;
+        if ($neben !== '') $px += (mb_strlen($neben) + 3) * 6.3;
+        return (int)ceil($px);
     }
 
     private function renderBalken(array $p, bool $editierbar): string
@@ -315,7 +395,7 @@ class ZeitplanFrontendView
 
         return sprintf(
             '<div class="%s" style="left:%dpx; width:%dpx; top:%dpx; --tt-farbe:%s; --tt-textfarbe:%s" title="%s" aria-label="%s" data-termin-id="%d"%s>'
-            . '%s<span class="tt-zp-text">%s</span></div>',
+            . '%s<span class="tt-zp-text"%s>%s</span></div>',
             implode(' ', $klassen),
             $p['links'],
             $p['breite'],
@@ -327,6 +407,7 @@ class ZeitplanFrontendView
             (int)$t->getId(),
             $editierbar ? sprintf(' tabindex="0" role="button" data-beginn="%s" data-ende="%s"', $t->getBeginn()->format('Y-m-d'), $t->getEnde()->format('Y-m-d')) : '',
             $p['stichtag'] ? '<span class="tt-zp-raute" aria-hidden="true"></span>' : '',
+            $p['textMax'] !== null ? ' style="max-width:' . (int)$p['textMax'] . 'px"' : '',
             $text
         );
     }

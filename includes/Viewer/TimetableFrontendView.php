@@ -45,6 +45,8 @@ class TimetableFrontendView {
     private string $standardAnsicht;
     /** @var array<string,string> Bildungsgang-Kürzel → Bezeichnung */
     private array $bgNamen;
+    /** @var array<int,array{name:string,start:string,ende:string,feiertag:bool}> */
+    private array $ferienListe;
 
     /**
      * @param array{ansichten?: string[], standard?: string, bg_bezeichnungen?: array<string,string>} $optionen
@@ -57,6 +59,7 @@ class TimetableFrontendView {
         $this->editor = $editor;
         $this->bezeichnungen = $bezeichnungen;
         $this->bgNamen = $optionen['bg_bezeichnungen'] ?? [];
+        $this->ferienListe = $optionen['ferien_liste'] ?? [];
         $aktiv = array_values(array_intersect(array_keys(self::ANSICHTEN), $optionen['ansichten'] ?? array_keys(self::ANSICHTEN)));
         $this->ansichten = $aktiv ?: array_keys(self::ANSICHTEN);
         $standard = $optionen['standard'] ?? $this->ansichten[0];
@@ -162,7 +165,7 @@ class TimetableFrontendView {
         $bgs = $this->editor['bildungsgaenge'] ?? [];
         switch ($key) {
             case 'zeitplan':
-                return (new ZeitplanFrontendView($this->timetable, $this->ferien, $this->farben, $this->bezeichnungen, $this->bgNamen, $bgs, $this->entwurf === 'ja'))->render();
+                return (new ZeitplanFrontendView($this->timetable, $this->ferien, $this->farben, $this->bezeichnungen, $this->bgNamen, $bgs, $this->entwurf === 'ja', $this->ferienListe))->render();
             case 'gantt':
                 return $this->generiereGantt();
             case 'liste':
