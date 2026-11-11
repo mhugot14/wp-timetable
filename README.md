@@ -92,7 +92,7 @@ Mitverschiebungen, `warning` = Konflikte). Fehler: 400 (ungültig, mit
 
 | Ansicht | Inhalt |
 |---|---|
-| **Zeitplan** | Neu gedachte Zeitleiste: ausgeschriebene Ereignistypen am Balken, Stichtage als Raute, Zeiträume als Balken, Monat/Kalenderwoche/Tag, Ferienbänder, Heute-Linie (springt beim Öffnen zu heute), Langname des Bildungsgangs |
+| **Zeitplan** | Neu gedachte Zeitleiste: ausgeschriebene Ereignistypen am Balken, Stichtage als Tageskachel mit Datum, Zeiträume als Balken, Tage des Termins werden beim Darüberfahren im Kopf markiert, Monat/Kalenderwoche/Tag, Ferienbänder, Heute-Linie (springt beim Öffnen zu heute), Langname des Bildungsgangs |
 | **GANTT** | Klassisches Tagesraster mit Kürzeln |
 | **Liste** | Chronologische Karten – gut auf dem Handy |
 | **Monat** | Kalenderblätter je Monat |

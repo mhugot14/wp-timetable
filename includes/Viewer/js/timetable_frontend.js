@@ -60,7 +60,29 @@
         }
     });
 
-    // 3. Zeitplan: beim ersten Anzeigen zum heutigen Tag scrollen
+    // 3. Zeitplan: beim Darüberfahren die Tage des Termins im Kopf markieren
+    function markiere(balken, an) {
+        const zp = balken.closest('.tt-zp');
+        if (!zp) return;
+        zp.querySelectorAll('.tt-zp-tag.is-markiert').forEach(t => t.classList.remove('is-markiert'));
+        if (!an) return;
+        const von = parseInt(balken.dataset.tagVon, 10);
+        const tage = parseInt(balken.dataset.tage, 10) || 1;
+        for (let i = von; i < von + tage; i++) {
+            const tag = zp.querySelector('.tt-zp-tag[data-i="' + i + '"]');
+            if (tag) tag.classList.add('is-markiert');
+        }
+    }
+    ['mouseover', 'focusin'].forEach(ev => document.addEventListener(ev, (e) => {
+        const b = e.target.closest && e.target.closest('.tt-zp-balken[data-tag-von]');
+        if (b) markiere(b, true);
+    }));
+    ['mouseout', 'focusout'].forEach(ev => document.addEventListener(ev, (e) => {
+        const b = e.target.closest && e.target.closest('.tt-zp-balken[data-tag-von]');
+        if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) markiere(b, false);
+    }));
+
+    // 4. Zeitplan: beim ersten Anzeigen zum heutigen Tag scrollen
     function zuHeuteScrollen(bereich) {
         bereich.querySelectorAll('.tt-zp-scroll[data-heute-px]:not([data-gescrollt])').forEach(scroll => {
             if (scroll.offsetParent === null) return;           // (noch) unsichtbar

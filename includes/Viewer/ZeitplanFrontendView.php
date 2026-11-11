@@ -140,8 +140,8 @@ class ZeitplanFrontendView
             if ($t->format('Y-m-d') === (new DateTime('today'))->format('Y-m-d')) $klassen[] = 'is-heute';
             $titel = $feiertag ?? ($this->ferien[$t->format('d.m.y')] ?? '');
             $tagZeile .= sprintf(
-                '<div class="%s" style="left:%dpx"%s><span>%s</span>%s</div>',
-                implode(' ', $klassen), $i * self::TAG_PX,
+                '<div class="%s" style="left:%dpx" data-i="%d"%s><span>%s</span>%s</div>',
+                implode(' ', $klassen), $i * self::TAG_PX, $i,
                 $titel !== '' ? ' title="' . esc_attr($titel) . '"' : '',
                 self::WOCHENTAGE[(int)$t->format('N')], $t->format('j')
             );
@@ -394,7 +394,7 @@ class ZeitplanFrontendView
         if ($editierbar) $klassen[] = 'tt-editierbar';
 
         return sprintf(
-            '<div class="%s" style="left:%dpx; width:%dpx; top:%dpx; --tt-farbe:%s; --tt-textfarbe:%s" title="%s" aria-label="%s" data-termin-id="%d"%s>'
+            '<div class="%s" style="left:%dpx; width:%dpx; top:%dpx; --tt-farbe:%s; --tt-textfarbe:%s" title="%s" aria-label="%s" data-termin-id="%d" data-tag-von="%d" data-tage="%d"%s>'
             . '%s<span class="tt-zp-text"%s>%s</span></div>',
             implode(' ', $klassen),
             $p['links'],
@@ -405,8 +405,12 @@ class ZeitplanFrontendView
             esc_attr($tooltip),
             esc_attr(str_replace("\n", ', ', $tooltip)),
             (int)$t->getId(),
+            // Für die Hervorhebung der Tage im Kopf beim Darüberfahren
+            intdiv($p['links'], self::TAG_PX),
+            intdiv($p['breite'], self::TAG_PX),
             $editierbar ? sprintf(' tabindex="0" role="button" data-beginn="%s" data-ende="%s"', $t->getBeginn()->format('Y-m-d'), $t->getEnde()->format('Y-m-d')) : '',
-            $p['stichtag'] ? '<span class="tt-zp-raute" aria-hidden="true"></span>' : '',
+            // Stichtag: Kachel genau eine Tagesspalte breit, mit der Tageszahl darin
+            $p['stichtag'] ? '<span class="tt-zp-kachel" aria-hidden="true">' . $t->getBeginn()->format('j') . '</span>' : '',
             $p['textMax'] !== null ? ' style="max-width:' . (int)$p['textMax'] . 'px"' : '',
             $text
         );

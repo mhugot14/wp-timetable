@@ -205,6 +205,8 @@
         if (!drag) return;
         drag.bar.classList.remove('tt-dragging');
         versetze(drag.bar, 0);
+        const kachel = drag.bar.querySelector('.tt-zp-kachel');
+        if (kachel && drag.bar.dataset.beginn) kachel.textContent = String(parseInt(drag.bar.dataset.beginn.slice(8), 10));
         if (infoBox) infoBox.hidden = true;
         drag = null;
     }
@@ -254,6 +256,9 @@
         }
         const b = plusTage(drag.bar.dataset.beginn, drag.tage);
         const en = plusTage(drag.bar.dataset.ende, drag.tage);
+        // Tageskachel (Stichtag im Zeitplan) zeigt beim Ziehen den neuen Tag
+        const kachel = drag.bar.querySelector('.tt-zp-kachel');
+        if (kachel) kachel.textContent = String(parseInt(b.slice(8), 10));
         infoBox.textContent = anzeige(b) + (b !== en ? ' – ' + anzeige(en) : '')
             + (drag.tage ? '  (' + (drag.tage > 0 ? '+' : '') + drag.tage + ' Tag' + (Math.abs(drag.tage) === 1 ? '' : 'e') + ')' : '');
         infoBox.style.left = (e.clientX + 14) + 'px';

@@ -909,16 +909,7 @@
     color: #1d2327;
 }
 .tt-zp-balken.text-aussen .tt-zp-neben { color: #50575e; opacity: 1; }
-.tt-zp-raute {
-    display: block;
-    width: 14px;
-    height: 14px;
-    margin: 0 auto;
-    background: var(--tt-farbe);
-    border: 2px solid #fff;
-    box-shadow: 0 0 0 1px var(--tt-farbe), 0 1px 3px rgba(0, 0, 0, .3);
-    transform: rotate(45deg);
-}
+/* (Raute durch Tageskachel ersetzt, siehe unten) */
 .tt-zp-balken:hover,
 .tt-zp-balken:focus {
     z-index: 3;
@@ -932,7 +923,7 @@
     user-select: none;
 }
 .tt-edit-mode .tt-zp-balken.tt-editierbar.is-zeitraum,
-.tt-edit-mode .tt-zp-balken.tt-editierbar .tt-zp-raute {
+.tt-edit-mode .tt-zp-balken.tt-editierbar .tt-zp-kachel {
     outline: 2px dashed rgba(153, 104, 0, .7);
     outline-offset: 1px;
 }
@@ -984,3 +975,46 @@
 }
 .tt-zp-tag.is-feiertag { color: #b32d2e; }
 .tt-zp-tag.is-heute.is-feiertag::after { background: #fff; }
+
+/* Zeitplan 0.10.2: Tageskachel für Stichtage, Tageslinien, Hervorhebung */
+.tt-zp-kachel {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(var(--tt-tag) - 4px);
+    height: 100%;
+    margin: 0 2px;
+    box-sizing: border-box;
+    border-radius: 5px;
+    background: var(--tt-farbe);
+    color: var(--tt-textfarbe);
+    font-size: 12px;
+    font-weight: 700;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .25);
+    flex-shrink: 0;
+}
+/* Feine Linie zwischen allen Tagen (ohne zusätzliche Elemente) */
+.tt-zp-raster {
+    background-image: repeating-linear-gradient(
+        to right,
+        transparent 0,
+        transparent calc(var(--tt-tag) - 1px),
+        #eef0f3 calc(var(--tt-tag) - 1px),
+        #eef0f3 var(--tt-tag)
+    );
+}
+.tt-zp-raster-tag { box-shadow: inset -1px 0 0 #e6e8ec; }
+.tt-zp-reihe-tag { border-top: 1px solid var(--tt-linie); }
+.tt-zp-tag { border-right: 1px solid #eef0f3; box-sizing: border-box; }
+/* Beim Darüberfahren: Tage des Termins im Kopf markieren */
+.tt-zp-tag.is-markiert {
+    background: var(--tt-kopf);
+    color: #fff;
+    border-radius: 4px;
+}
+.tt-zp-tag.is-markiert span { color: #dbe6f2; }
+.tt-zp-balken.is-stichtag:hover .tt-zp-kachel,
+.tt-zp-balken.is-stichtag:focus .tt-zp-kachel {
+    outline: 2px solid var(--tt-kopf);
+    outline-offset: 1px;
+}
