@@ -113,15 +113,20 @@ class TimetableFrontendView {
 				$grouped[$t->getBildungsgang()][] = $t;
 			}
 
+			$rangeStart = $dates[0] ?? null;
+			$dayCount = count($dates);
+
 			foreach ($grouped as $bg => $bgTermine) {
 				// 1. iCal-Link Logik (Nur wenn kein Entwurf)
 				$icalLink = '';
 				if ($this->entwurf !== 'ja') {
+					// Ohne zweites Argument nutzt add_query_arg die aktuelle Request-URI
+					// (relativ) – das funktioniert auch in Unterverzeichnis-Installationen.
 					$downloadUrl = add_query_arg([
-						'download_ical' => 1, 
-						'timetable_id' => $this->timetable->getId(), 
+						'download_ical' => 1,
+						'timetable_id' => $this->timetable->getId(),
 						'bg' => $bg
-					], home_url($_SERVER['REQUEST_URI']));
+					]);
 
 					$icalLink = ' <a href="' . esc_url($downloadUrl) . '" class="ical-small-link">(iCal)</a>';
 				}
@@ -129,40 +134,88 @@ class TimetableFrontendView {
 				// 2. Filter-Slug vorbereiten (trim gegen Leerzeichen-Fehler)
 				$bg_slug = trim((string)$bg);
 
-				$html .= '<tr data-bg="' . esc_attr($bg_slug) . '">';
-				$html .= '<td class="sticky_column"><span class="bg-name">' . esc_html($bg) . '</span>' . $icalLink . '</td>';
+				// 3. Überlappende Termine auf mehrere Spuren (Zeilen) verteilen
+				$lanes = $this->verteileAufSpuren($bgTermine);
+				$laneCount = count($lanes);
 
-				// 3. Zeitstrahl-Zellen rendern
-				$idx = 0;
-				foreach ($bgTermine as $termin) {
-					// Leere Zellen vor dem Termin
-					while ($idx < count($dates) && $dates[$idx] < $termin->getBeginn()) {
+				foreach ($lanes as $laneIdx => $laneTermine) {
+					$rowClass = $laneIdx > 0 ? ' class="tt-lane-continued"' : '';
+					$html .= '<tr data-bg="' . esc_attr($bg_slug) . '"' . $rowClass . '>';
+					if ($laneIdx === 0) {
+						$rowspan = $laneCount > 1 ? ' rowspan="' . $laneCount . '"' : '';
+						$html .= '<td class="sticky_column"' . $rowspan . '><span class="bg-name">' . esc_html($bg) . '</span>' . $icalLink . '</td>';
+					}
+
+					// 4. Zeitstrahl-Zellen rendern
+					$idx = 0;
+					foreach ($laneTermine as $termin) {
+						$startIdx = $rangeStart ? (int)$rangeStart->diff($termin->getBeginn())->days : 0;
+
+						// Leere Zellen vor dem Termin
+						while ($idx < $startIdx && $idx < $dayCount) {
+							$html .= $this->renderEmptyCell($dates[$idx], $today);
+							$idx++;
+						}
+
+						// Der Termin-Balken (nie über das Tabellenende hinaus)
+						if ($idx < $dayCount) {
+							$dauer = max(1, min($termin->getDauer(), $dayCount - $idx));
+							$label = esc_html($termin->getEreignistyp());
+							if ($dauer > 4) {
+								$label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
+							}
+							$title = sprintf('%s: %s (%s – %s)',
+								$termin->getEreignistyp(),
+								$termin->getBezeichnung(),
+								$termin->getBeginn()->format('d.m.'),
+								$termin->getEnde()->format('d.m.')
+							);
+
+							$html .= '<td colspan="' . $dauer . '" class="td_' . sanitize_title($termin->getEreignistyp()) . '" title="' . esc_attr($title) . '">' . $label . '</td>';
+							$idx += $dauer;
+						}
+					}
+
+					// Restliche leere Zellen nach den Terminen
+					while ($idx < $dayCount) {
 						$html .= $this->renderEmptyCell($dates[$idx], $today);
 						$idx++;
 					}
-
-					// Der Termin-Balken
-					if ($idx < count($dates)) {
-						$dauer = $termin->getDauer();
-						$label = esc_html($termin->getEreignistyp());
-						if ($dauer > 4) {
-							$label .= ' (' . esc_html($termin->getBezeichnung()) . ')';
-						}
-
-						$html .= '<td colspan="' . $dauer . '" class="td_' . sanitize_title($termin->getEreignistyp()) . '">' . $label . '</td>';
-						$idx += $dauer;
-					}
+					$html .= '</tr>';
 				}
-
-				// Restliche leere Zellen nach den Terminen
-				while ($idx < count($dates)) {
-					$html .= $this->renderEmptyCell($dates[$idx], $today);
-					$idx++;
-				}
-				$html .= '</tr>';
 			}
 			return $html . '</tbody>';
 		}
+
+    /**
+     * Verteilt Termine so auf Spuren, dass sich innerhalb einer Spur nichts überlappt
+     * (Greedy: jeder Termin kommt in die erste Spur, deren letzter Termin vorher endet).
+     *
+     * @param \MH\Timetable\Model\Entity\Termin[] $termine
+     * @return array<int, \MH\Timetable\Model\Entity\Termin[]>
+     */
+    private function verteileAufSpuren(array $termine): array {
+        usort($termine, fn($a, $b) => [$a->getBeginn(), $a->getEnde()] <=> [$b->getBeginn(), $b->getEnde()]);
+
+        $lanes = [];
+        $laneEnds = [];
+        foreach ($termine as $termin) {
+            $placed = false;
+            foreach ($laneEnds as $i => $end) {
+                if ($end < $termin->getBeginn()) {
+                    $lanes[$i][] = $termin;
+                    $laneEnds[$i] = $termin->getEnde();
+                    $placed = true;
+                    break;
+                }
+            }
+            if (!$placed) {
+                $lanes[] = [$termin];
+                $laneEnds[] = $termin->getEnde();
+            }
+        }
+        return $lanes;
+    }
 
     private function renderEmptyCell(DateTime $date, string $today): string {
         $dateStr = $date->format('d.m.y');

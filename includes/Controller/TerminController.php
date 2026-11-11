@@ -35,10 +35,11 @@ class TerminController
         $errors = $this->checkFormData($sanitizedData);
 
         if (empty($errors)) {
-            if (empty($formData['id'])) {
-                $this->addObject($sanitizedData);
-            } else {
-                $this->editObject((int)$formData['id'], $sanitizedData);
+            $ok = empty($formData['id'])
+                ? $this->addObject($sanitizedData)
+                : $this->editObject((int)$formData['id'], $sanitizedData);
+            if (!$ok) {
+                $errors['datenbank'][] = 'Der Termin konnte nicht gespeichert werden (Datenbankfehler).';
             }
         }
 
@@ -114,16 +115,38 @@ class TerminController
         if (empty($data['bezeichnung'])) {
             $errors['bezeichnung'][] = 'Bezeichnung fehlt.';
         }
+        if (empty($data['bildungsgang'])) {
+            $errors['bildungsgang'][] = 'Bitte wählen Sie einen Bildungsgang aus.';
+        }
+        if (empty($data['ereignistyp'])) {
+            $errors['ereignistyp'][] = 'Bitte wählen Sie einen Ereignistyp aus.';
+        }
         if (empty($data['beginn']) || empty($data['ende'])) {
             $errors['datum'][] = 'Zeitraum unvollständig.';
         } else {
-            $start = new DateTime($data['beginn']);
-            $end = new DateTime($data['ende']);
-            if ($end < $start) {
+            $start = self::parseDate($data['beginn']);
+            $end = self::parseDate($data['ende']);
+            if (!$start || !$end) {
+                $errors['datum'][] = 'Ungültiges Datum im Zeitraum.';
+            } elseif ($end < $start) {
                 $errors['ende'][] = 'Das Ende darf nicht vor dem Beginn liegen.';
             }
         }
         return $errors;
+    }
+
+    /**
+     * Wandelt ein Datum im Format Y-m-d in ein DateTime (00:00 Uhr) um.
+     * Liefert null bei ungültiger Eingabe statt eine Exception zu werfen.
+     */
+    private static function parseDate(string $value): ?DateTime
+    {
+        $date = DateTime::createFromFormat('!Y-m-d', $value);
+        $errors = DateTime::getLastErrors();
+        if (!$date || ($errors && ($errors['warning_count'] > 0 || $errors['error_count'] > 0))) {
+            return null;
+        }
+        return $date;
     }
 
     /**
@@ -232,9 +255,9 @@ class TerminController
 	
 	public function getTerminDataAjax(): void
 	{
-		 // Sicherheit: Nonce prüfen
-		if (!check_ajax_referer('mh_tt_nonce', 'nonce', false)) {
-			wp_send_json_error(['message' => 'Sicherheits-Check fehlgeschlagen.']);
+		// Sicherheit: Nonce und Berechtigung prüfen
+		if (!check_ajax_referer('mh_tt_nonce', 'nonce', false) || !current_user_can('manage_options')) {
+			wp_send_json_error(['message' => 'Sicherheits-Check fehlgeschlagen.'], 403);
 		}
 
 		$id = (int)($_GET['id'] ?? 0);
@@ -256,21 +279,37 @@ class TerminController
 		]);
 	}
 	
-	public function processBulkSubmission(array $formData): void
+	/**
+	 * Massenänderung: überschreibt nur die ausgefüllten Felder.
+	 * @return array Fehlermeldungen (leer bei Erfolg)
+	 */
+	public function processBulkSubmission(array $formData): array
 	{
-		$ids = explode(',', $formData['id']);
+		$ids = array_filter(array_map('intval', explode(',', (string)($formData['id'] ?? ''))));
 
 		// Wir sammeln nur die Daten, die NICHT leer sind
 		$updateData = [];
+		$errors = [];
 		if (!empty($formData['timetable_ID'])) $updateData['timetableId'] = (int)$formData['timetable_ID'];
 		if (!empty($formData['bildungsgang']))  $updateData['bildungsgang'] = sanitize_text_field($formData['bildungsgang']);
-		  if (!empty($formData['bezeichnung']))   $updateData['bezeichnung'] = sanitize_text_field($formData['bezeichnung']);
+		if (!empty($formData['bezeichnung']))   $updateData['bezeichnung'] = sanitize_text_field($formData['bezeichnung']);
 		if (!empty($formData['ereignistyp']))   $updateData['ereignistyp'] = sanitize_text_field($formData['ereignistyp']);
-		if (!empty($formData['beginn']))        $updateData['beginn'] = new \DateTime($formData['beginn']);
-		if (!empty($formData['ende']))          $updateData['ende'] = new \DateTime($formData['ende']);
+		foreach (['beginn', 'ende'] as $field) {
+			if (!empty($formData[$field])) {
+				$date = self::parseDate((string)$formData[$field]);
+				if ($date) {
+					$updateData[$field] = $date;
+				} else {
+					$errors[$field][] = 'Ungültiges Datum.';
+				}
+			}
+		}
 		if (!empty($formData['verantwortlich'])) $updateData['verantwortlich'] = sanitize_text_field($formData['verantwortlich']);
 
-		if (empty($updateData)) return;
+		if (!empty($errors)) return $errors;
+		if (empty($updateData)) {
+			return ['allgemein' => ['Es wurde kein Feld ausgefüllt – nichts geändert.']];
+		}
 
 		foreach ($ids as $id) {
 			$termin = $this->repository->find((int)$id);
@@ -279,14 +318,25 @@ class TerminController
 			// Nur die geänderten Felder in die Entity schreiben
 			if (isset($updateData['timetableId']))   $termin->setTimetableId($updateData['timetableId']);
 			if (isset($updateData['bildungsgang']))  $termin->setBildungsgang($updateData['bildungsgang']);
-			   if (isset($updateData['bezeichnung']))   $termin->setBezeichnung($updateData['bezeichnung']);
+			if (isset($updateData['bezeichnung']))   $termin->setBezeichnung($updateData['bezeichnung']);
 			if (isset($updateData['ereignistyp']))   $termin->setEreignistyp($updateData['ereignistyp']);
-			if (isset($updateData['beginn']))        $termin->setBeginn($updateData['beginn']);
-			if (isset($updateData['ende']))          $termin->setEnde($updateData['ende']);
+			if (isset($updateData['beginn']))        $termin->setBeginn(clone $updateData['beginn']);
+			if (isset($updateData['ende']))          $termin->setEnde(clone $updateData['ende']);
 			if (isset($updateData['verantwortlich'])) $termin->setVerantwortlich($updateData['verantwortlich']);
+
+			if ($termin->getEnde() < $termin->getBeginn()) {
+				$errors['ende'][] = sprintf(
+					'Termin %d („%s“) nicht geändert: Das Ende läge vor dem Beginn.',
+					$id,
+					$termin->getBezeichnung()
+				);
+				continue;
+			}
 
 			$this->repository->update((int)$id, $termin);
 		}
+
+		return $errors;
 	}
         /**
         * Kopiert mehrere Termine in eine Ziel-Zeittafel.

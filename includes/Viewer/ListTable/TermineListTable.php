@@ -14,6 +14,8 @@ use WP_List_Table;
  */
 class TermineListTable extends WP_List_Table
 {
+    private const PER_PAGE = 50;
+
     private TerminController $terminController;
     private TimetableController $timetableController;
     private TaxonomyService $taxonomyService;
@@ -86,7 +88,18 @@ class TermineListTable extends WP_List_Table
         // 4. Sortierung
         usort($this->items, [$this, 'sortData']);
 
-        // 5. Header
+        // 5. Seitenaufteilung
+        $perPage = self::PER_PAGE;
+        $total = count($this->items);
+        $this->set_pagination_args([
+            'total_items' => $total,
+            'per_page'    => $perPage,
+            'total_pages' => (int)ceil($total / $perPage),
+        ]);
+        $currentPage = min($this->get_pagenum(), max(1, (int)ceil($total / $perPage)));
+        $this->items = array_slice($this->items, ($currentPage - 1) * $perPage, $perPage);
+
+        // 6. Header
         $this->_column_headers = [
             $this->get_columns(),
             [], 
@@ -97,10 +110,14 @@ class TermineListTable extends WP_List_Table
     public function get_sortable_columns(): array
     {
         return [
-            'id'           => ['id', true],
-            'bildungsgang' => ['bildungsgang', false],
-            'beginn'       => ['beginn', false],
-            'timetable_ID' => ['timetable_ID', false]
+            'id'             => ['id', true],
+            'bildungsgang'   => ['bildungsgang', false],
+            'bezeichnung'    => ['bezeichnung', false],
+            'ereignistyp'    => ['ereignistyp', false],
+            'beginn'         => ['beginn', false],
+            'ende'           => ['ende', false],
+            'verantwortlich' => ['verantwortlich', false],
+            'timetable_ID'   => ['timetable_ID', false]
         ];
     }
 
@@ -132,8 +149,10 @@ class TermineListTable extends WP_List_Table
 
     public function column_actions($item): string
     {
-        $deleteNonce = wp_create_nonce('delete_termin_' . $item->getId());
-        $deleteUrl = admin_url(sprintf('admin.php?page=termine&action=delete&id=%d&_wpnonce=%s', $item->getId(), $deleteNonce));
+        $deleteUrl = wp_nonce_url(
+            admin_url(sprintf('admin-post.php?action=mh_tt_delete_termin&id=%d', $item->getId())),
+            'delete_termin_' . $item->getId()
+        );
 
         return sprintf(
             '<a href="#" class="button mh-tt-edit-btn" data-id="%d">Bearbeiten</a> ' .
@@ -187,20 +206,40 @@ class TermineListTable extends WP_List_Table
     public function process_bulk_action(): void
     {
         if ($this->current_action() === 'bulk-delete' && !empty($_REQUEST['bulk-delete'])) {
-            foreach ($_REQUEST['bulk-delete'] as $id) {
-                $this->terminController->deleteObject((int)$id);
+            check_admin_referer('bulk-' . $this->_args['plural']);
+            if (!current_user_can('manage_options')) return;
+
+            $count = 0;
+            foreach ((array)$_REQUEST['bulk-delete'] as $id) {
+                if ($this->terminController->deleteObject((int)$id)) $count++;
             }
-            echo "<div class='updated'><p>Ausgewählte Termine gelöscht.</p></div>";
+            // Die URL behält die Parameter (GET-Formular); beim Blättern würden bereits
+            // gelöschte IDs erneut übergeben – dann ist $count 0 und es gibt keine Meldung.
+            if ($count > 0) {
+                printf("<div class='notice notice-success is-dismissible'><p>%d Termin(e) gelöscht.</p></div>", $count);
+            }
         }
     }
 
     private function sortData(Termin $a, Termin $b): int
     {
-        $orderby = $_REQUEST['orderby'] ?? 'id';
-        $order = $_REQUEST['order'] ?? 'asc';
-        $res = ($orderby === 'id' || $orderby === 'timetable_ID') 
-            ? ($a->getId() <=> $b->getId()) 
-            : strcmp((string)$a->getBeginn()->getTimestamp(), (string)$b->getBeginn()->getTimestamp());
+        $orderby = sanitize_key($_REQUEST['orderby'] ?? 'id');
+        $order = strtolower((string)($_REQUEST['order'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        switch ($orderby) {
+            case 'bildungsgang':   $res = strnatcasecmp($a->getBildungsgang(), $b->getBildungsgang()); break;
+            case 'bezeichnung':    $res = strnatcasecmp($a->getBezeichnung(), $b->getBezeichnung()); break;
+            case 'ereignistyp':    $res = strnatcasecmp($a->getEreignistyp(), $b->getEreignistyp()); break;
+            case 'verantwortlich': $res = strnatcasecmp($a->getVerantwortlich(), $b->getVerantwortlich()); break;
+            case 'beginn':         $res = $a->getBeginn() <=> $b->getBeginn(); break;
+            case 'ende':           $res = $a->getEnde() <=> $b->getEnde(); break;
+            case 'timetable_id':   $res = $a->getTimetableId() <=> $b->getTimetableId(); break;
+            default:               $res = 0;
+        }
+        // Bei Gleichstand stabil nach Beginn und ID sortieren
+        if ($res === 0 && $orderby !== 'id') $res = $a->getBeginn() <=> $b->getBeginn();
+        if ($res === 0) $res = $a->getId() <=> $b->getId();
+
         return ($order === 'asc') ? $res : -$res;
     }
 

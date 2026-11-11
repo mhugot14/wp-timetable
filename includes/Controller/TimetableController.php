@@ -5,6 +5,7 @@ namespace MH\Timetable\Controller;
 
 use MH\Timetable\Model\Entity\Timetable;
 use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
+use MH\Timetable\Model\Repository\TermineRepositoryInterface;
 use MH\Timetable\Service\TimetableCopyService;
 use DateTime;
 
@@ -14,12 +15,17 @@ use DateTime;
 class TimetableController
 {
     private TimetableRepositoryInterface $repository;
-	private TimetableCopyService $copyService;
+    private TermineRepositoryInterface $termineRepository;
+    private TimetableCopyService $copyService;
 
-    public function __construct(TimetableRepositoryInterface $repository, TimetableCopyService $copyService) 
-    {
+    public function __construct(
+        TimetableRepositoryInterface $repository,
+        TermineRepositoryInterface $termineRepository,
+        TimetableCopyService $copyService
+    ) {
         $this->repository = $repository;
-		$this->copyService = $copyService;
+        $this->termineRepository = $termineRepository;
+        $this->copyService = $copyService;
     }
 
     /**
@@ -41,10 +47,11 @@ class TimetableController
         $errors = $this->checkFormData($sanitizedData);
 
         if (empty($errors)) {
-            if ($sanitizedData['id'] === null) {
-                $this->addObject($sanitizedData);
-            } else {
-                $this->editObject($sanitizedData['id'], $sanitizedData);
+            $ok = $sanitizedData['id'] === null
+                ? $this->addObject($sanitizedData)
+                : $this->editObject($sanitizedData['id'], $sanitizedData);
+            if (!$ok) {
+                $errors['datenbank'][] = 'Die Timetable konnte nicht gespeichert werden (Datenbankfehler).';
             }
         }
 
@@ -85,13 +92,15 @@ class TimetableController
             return ['success' => false, 'message' => 'Zeittafel nicht gefunden.'];
         }
 
-        // Hinweis: Die Prüfung auf zugeordnete Termine sollte idealerweise 
-        // über das TermineRepository erfolgen. 
-        // Hier implementieren wir die Logik analog zu deinem alten Stand:
-        if ($timetable->getLaengeInTagen() > 0) {
+        $anzahlTermine = $this->termineRepository->countByTimetableId($id);
+        if ($anzahlTermine > 0) {
             return [
-                'success' => false, 
-                'message' => 'Timetable kann nicht gelöscht werden, da noch Termine zugeordnet sind.'
+                'success' => false,
+                'message' => sprintf(
+                    'Die Timetable „%s“ kann nicht gelöscht werden, da ihr noch %d Termin(e) zugeordnet sind.',
+                    $timetable->getBezeichnung(),
+                    $anzahlTermine
+                )
             ];
         }
 
@@ -145,9 +154,10 @@ class TimetableController
 
 		public function getTimetableDataAjax(): void
 		{
-			// 1. Sicherheit: Nonce prüfen
-			if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'mh_tt_nonce')) {
-				wp_send_json_error(['message' => 'Sicherheits-Check fehlgeschlagen.']);
+			// 1. Sicherheit: Nonce und Berechtigung prüfen
+			if (!isset($_GET['nonce']) || !wp_verify_nonce($_GET['nonce'], 'mh_tt_nonce')
+				|| !current_user_can('manage_options')) {
+				wp_send_json_error(['message' => 'Sicherheits-Check fehlgeschlagen.'], 403);
 			}
 
 			// 2. ID holen
@@ -173,9 +183,13 @@ class TimetableController
 		
 		public function copyTimetable(array $data): bool
 		{
-			$sourceId = (int)$data['source_id'];
-			$newName = sanitize_text_field($data['new_name']);
-			$newEndDate = new DateTime($data['new_end_date']);
+			$sourceId = (int)($data['source_id'] ?? 0);
+			$newName = sanitize_text_field($data['new_name'] ?? '');
+			$newEndDate = DateTime::createFromFormat('!Y-m-d', (string)($data['new_end_date'] ?? ''));
+
+			if ($sourceId <= 0 || $newName === '' || !$newEndDate) {
+				return false;
+			}
 
 			return $this->copyService->duplicate($sourceId, $newName, $newEndDate);
 		}

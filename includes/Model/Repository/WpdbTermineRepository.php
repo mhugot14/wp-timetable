@@ -87,6 +87,16 @@ class WpdbTermineRepository implements TermineRepositoryInterface
         return array_map([$this, 'mapToEntity'], $results ?: []);
     }
 
+    public function countByTimetableId(int $timetableId): int
+    {
+        return (int)$this->wpdb->get_var(
+            $this->wpdb->prepare(
+                "SELECT COUNT(*) FROM {$this->tableName} WHERE timetable_ID = %d",
+                $timetableId
+            )
+        );
+    }
+
     public function getFiltered(int $timetableId, string $bildungsgang, string $ereignistyp): array
 	{
 		$sql = "SELECT * FROM {$this->tableName} WHERE 1=1";

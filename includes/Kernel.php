@@ -36,7 +36,7 @@ class Kernel
 
         // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
         $terminController    = new TerminController($termineRepo);
-        $timetableController = new TimetableController($timetableRepo, $copyService);
+        $timetableController = new TimetableController($timetableRepo, $termineRepo, $copyService);
         $ferienController    = new FerienController($ferienRepo, $holidayApi);
 
         // --- 4. VIEW (Orchestrator) ---
@@ -47,7 +47,8 @@ class Kernel
             $termineRepo,
             $timetableRepo,
             $ferienRepo,
-            $taxonomyService
+            $taxonomyService,
+            $icalService
         );
 
         // --- 5. HOOKS & AJAX ---

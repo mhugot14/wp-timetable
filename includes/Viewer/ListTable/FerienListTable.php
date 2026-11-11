@@ -131,6 +131,8 @@ class FerienListTable extends WP_List_Table
     public function process_bulk_action(): void
     {
         if ($this->current_action() === 'bulk-delete' && !empty($_POST['bulk-delete'])) {
+            check_admin_referer('bulk-' . $this->_args['plural']);
+            if (!current_user_can('manage_options')) return;
             $deleteIds = array_map('intval', $_POST['bulk-delete']);
             $count = 0;
 

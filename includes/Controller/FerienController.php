@@ -40,15 +40,17 @@ class FerienController
      */
     public function saveFerien(array $data): bool
     {
-        try {
-            $ferien = new Ferien(
-                sanitize_text_field($data['name']),
-                new DateTime($data['startdatum']),
-                new DateTime($data['enddatum']),
-                sanitize_text_field($data['typ'])
-            );
+        $name  = sanitize_text_field((string)($data['name'] ?? ''));
+        $start = DateTime::createFromFormat('!Y-m-d', (string)($data['startdatum'] ?? ''));
+        $ende  = DateTime::createFromFormat('!Y-m-d', (string)($data['enddatum'] ?? ''));
+        $typ   = (($data['typ'] ?? '') === 'Feiertag') ? 'Feiertag' : 'Ferien';
 
-            return $this->repository->create($ferien);
+        if ($name === '' || !$start || !$ende || $ende < $start) {
+            return false;
+        }
+
+        try {
+            return $this->repository->create(new Ferien($name, $start, $ende, $typ));
         } catch (Exception $e) {
             error_log('Fehler beim Speichern der Ferien: ' . $e->getMessage());
             return false;

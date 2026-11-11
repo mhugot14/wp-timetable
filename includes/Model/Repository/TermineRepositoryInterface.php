@@ -13,5 +13,6 @@ interface TermineRepositoryInterface
     public function update(int $id, Termin $termin): bool;
     public function delete(int $id): bool;
     public function getByTimetableId(int $timetableId): array;
+    public function countByTimetableId(int $timetableId): int;
     public function getFiltered(int $timetableId, string $bildungsgang, string $ereignistyp): array;
 }

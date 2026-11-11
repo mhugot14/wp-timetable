@@ -10,8 +10,15 @@ use MH\Timetable\Model\Repository\TermineRepositoryInterface;
 use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 use MH\Timetable\Model\Repository\FerienRepositoryInterface;
 use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\IcalService;
 
 class View {
+    /** Berechtigung für alle Verwaltungsfunktionen des Plugins. */
+    public const CAPABILITY = 'manage_options';
+
+    /** Seiten-Slugs, auf denen Admin-Meldungen des Plugins angezeigt werden. */
+    private const PLUGIN_PAGES = ['mh-timetable', 'termine', 'Einstellungen'];
+
     private TerminController $terminController;
     private TimetableController $timetableController;
     private FerienController $ferienController;
@@ -19,6 +26,7 @@ class View {
     private TimetableRepositoryInterface $timetableRepository;
     private FerienRepositoryInterface $ferienRepository;
     private TaxonomyService $taxonomyService;
+    private IcalService $icalService;
 
     public function __construct(
         TerminController $terminController,
@@ -27,7 +35,8 @@ class View {
         TermineRepositoryInterface $termineRepository,
         TimetableRepositoryInterface $timetableRepository,
         FerienRepositoryInterface $ferienRepository,
-        TaxonomyService $taxonomyService
+        TaxonomyService $taxonomyService,
+        IcalService $icalService
     ) {
         $this->terminController = $terminController;
         $this->timetableController = $timetableController;
@@ -36,6 +45,7 @@ class View {
         $this->timetableRepository = $timetableRepository;
         $this->ferienRepository = $ferienRepository;
         $this->taxonomyService = $taxonomyService;
+        $this->icalService = $icalService;
         $this->initHooks();
     }
 
@@ -43,28 +53,30 @@ class View {
         add_action('admin_menu', [$this, 'createMenu']);
         add_action('admin_enqueue_scripts', [$this, 'adminJavascript']);
         add_action('admin_enqueue_scripts', [$this, 'customAdminStyles']);
+        add_action('admin_notices', [$this, 'renderAdminNotices']);
         add_action('wp_enqueue_scripts', [$this, 'timetableEnqueueStyles']);
         add_action('init', [$this, 'setupShortcodes']);
         add_action('init', [$this, 'handleIcalDownload']);
-        
-        // POST Handler
+
+        // POST/GET Handler über admin-post.php
         add_action('admin_post_mh_tt_save_termin', [$this, 'handleSaveTermin']);
+        add_action('admin_post_mh_tt_delete_termin', [$this, 'handleDeleteTermin']);
+        add_action('admin_post_mh_tt_bulk_copy_termin', [$this, 'handleBulkCopyTermin']);
         add_action('admin_post_mh_tt_save_timetable', [$this, 'handleSaveTimetable']);
+        add_action('admin_post_mh_tt_delete_timetable', [$this, 'handleDeleteTimetable']);
         add_action('admin_post_mh_tt_copy_timetable', [$this, 'handleCopyTimetable']);
         add_action('admin_post_mh_tt_save_ferien', [$this, 'handleSaveFerien']);
         add_action('admin_post_mh_tt_import_ferien', [$this, 'handleImportFerien']);
-        
-        if (isset($_GET['action'])) {
-            if ($_GET['action'] === 'delete_ferien') add_action('admin_init', [$this, 'handleDeleteFerien']);
-            if ($_GET['action'] === 'delete_timetable') add_action('admin_init', [$this, 'handleDeleteTimetable']);
+
+        if (isset($_GET['action']) && $_GET['action'] === 'delete_ferien') {
+            add_action('admin_init', [$this, 'handleDeleteFerien']);
         }
-        add_action('admin_post_mh_tt_bulk_copy_termin', [$this, 'handleBulkCopyTermin']);
     }
 
     public function createMenu(): void {
-        add_menu_page('Timetable', 'Timetables', 'manage_options', 'mh-timetable', [$this, 'renderTimetablePage'], 'dashicons-clock', 30);
-        add_submenu_page('mh-timetable', 'Termine', 'Termine', 'manage_options', 'termine', [$this, 'renderTerminePage']);
-        add_submenu_page('mh-timetable', 'Einstellungen', 'Einstellungen', 'manage_options', 'Einstellungen', [$this, 'renderEinstellungen']);
+        add_menu_page('Timetable', 'Timetables', self::CAPABILITY, 'mh-timetable', [$this, 'renderTimetablePage'], 'dashicons-clock', 30);
+        add_submenu_page('mh-timetable', 'Termine', 'Termine', self::CAPABILITY, 'termine', [$this, 'renderTerminePage']);
+        add_submenu_page('mh-timetable', 'Einstellungen', 'Einstellungen', self::CAPABILITY, 'Einstellungen', [$this, 'renderEinstellungen']);
     }
 
     public function renderTimetablePage(): void {
@@ -103,6 +115,62 @@ class View {
         echo '</div>';
     }
 
+    // --- Admin-Meldungen ---
+
+    /**
+     * Merkt sich eine Meldung für den nächsten Seitenaufruf des aktuellen Users
+     * (Post/Redirect/Get – die Meldung überlebt den Redirect).
+     *
+     * @param string   $type     success | error | warning | info
+     * @param string[] $messages
+     */
+    private function addNotice(string $type, array $messages): void {
+        $key = 'mh_tt_notices_' . get_current_user_id();
+        $notices = get_transient($key) ?: [];
+        $notices[] = ['type' => $type, 'messages' => array_values($messages)];
+        set_transient($key, $notices, 5 * MINUTE_IN_SECONDS);
+    }
+
+    /** Wandelt ein Fehler-Array ['feld' => ['Text', ...]] in eine flache Liste um. */
+    private static function flattenErrors(array $errors): array {
+        $flat = [];
+        array_walk_recursive($errors, function ($msg) use (&$flat) { $flat[] = (string)$msg; });
+        return $flat;
+    }
+
+    public function renderAdminNotices(): void {
+        if (!in_array($_GET['page'] ?? '', self::PLUGIN_PAGES, true)) return;
+
+        $key = 'mh_tt_notices_' . get_current_user_id();
+        $notices = get_transient($key);
+        if (empty($notices)) return;
+        delete_transient($key);
+
+        foreach ($notices as $notice) {
+            $type = in_array($notice['type'], ['success', 'error', 'warning', 'info'], true) ? $notice['type'] : 'info';
+            echo '<div class="notice notice-' . esc_attr($type) . ' is-dismissible">';
+            if (count($notice['messages']) === 1) {
+                echo '<p>' . esc_html($notice['messages'][0]) . '</p>';
+            } else {
+                echo '<ul style="list-style:disc; margin-left:20px;">';
+                foreach ($notice['messages'] as $msg) echo '<li>' . esc_html($msg) . '</li>';
+                echo '</ul>';
+            }
+            echo '</div>';
+        }
+    }
+
+    private function redirectTo(string $page): void {
+        wp_safe_redirect(admin_url('admin.php?page=' . rawurlencode($page)));
+        exit;
+    }
+
+    private function requireCapability(): void {
+        if (!current_user_can(self::CAPABILITY)) {
+            wp_die('Sie haben keine Berechtigung für diese Aktion.', 'Keine Berechtigung', ['response' => 403]);
+        }
+    }
+
     // --- Modals ---
     private function renderModalContainer(): void {
         $ereignistypen = $this->taxonomyService->getEreignistypen();
@@ -110,7 +178,7 @@ class View {
         ?>
         <div id="mh-tt-modal" class="mh-tt-modal" style="display:none;"><div class="mh-tt-modal-content">
             <span class="mh-tt-close">&times;</span><h3 id="modal-title">Termin bearbeiten</h3>
-            <form id="mh-tt-termin-form" method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+            <form id="mh-tt-termin-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="mh_tt_save_termin"><input type="hidden" name="id" id="f_id">
                 <?php wp_nonce_field('termin_speichern_nonce', 'termin_speichern_nonce'); ?>
                 <table class="form-table">
@@ -120,13 +188,13 @@ class View {
                     <tr><th>Bildungsgang</th><td><select name="bildungsgang" id="f_bildungsgang" required><option value="">-- wählen --</option>
                         <?php foreach ($this->taxonomyService->getBildungsgaenge() as $bg) printf('<option value="%s">%s</option>', esc_attr($bg->name), esc_html($bg->name)); ?>
                     </select></td></tr>
-                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" required></td></tr>
+                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="f_bezeichnung" class="regular-text" maxlength="50" required></td></tr>
                     <tr><th>Ereignistyp</th><td><select name="ereignistyp" id="f_ereignistyp" required>
-                                  <option value="">-- wählen --</option> 
+                                  <option value="">-- wählen --</option>
                         <?php foreach ($ereignistypen as $et) printf('<option value="%s">%s</option>', esc_attr($et->name), esc_html($et->name)); ?>
                     </select></td></tr>
                     <tr><th>Zeitraum</th><td>Von: <input type="date" name="beginn" id="f_beginn" required> Bis: <input type="date" name="ende" id="f_ende" required></td></tr>
-                    <tr><th>Verantwortlich</th><td><input type="text" name="verantwortlich" id="f_verantwortlich" class="regular-text"></td></tr>
+                    <tr><th>Verantwortlich</th><td><input type="text" name="verantwortlich" id="f_verantwortlich" class="regular-text" maxlength="30"></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Speichern</button><button type="button" class="button mh-tt-close-btn">Abbrechen</button>
             </form>
@@ -138,12 +206,12 @@ class View {
         ?>
         <div id="mh-tt-timetable-modal" class="mh-tt-modal" style="display:none;"><div class="mh-tt-modal-content">
             <span class="mh-tt-close">&times;</span><h3 id="tt-modal-title">Zeittafel bearbeiten</h3>
-            <form id="mh-tt-timetable-form" method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+            <form id="mh-tt-timetable-form" method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="mh_tt_save_timetable"><input type="hidden" name="id" id="tt_f_id">
                 <?php wp_nonce_field('timetable_speichern_nonce', 'timetable_speichern_nonce'); ?>
                 <table class="form-table">
-                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="tt_f_bezeichnung" class="regular-text" required></td></tr>
-                    <tr><th>Beschreibung</th><td><textarea name="beschreibung" id="tt_f_beschreibung" class="regular-text" rows="3"></textarea></td></tr>
+                    <tr><th>Bezeichnung</th><td><input type="text" name="bezeichnung" id="tt_f_bezeichnung" class="regular-text" maxlength="30" required></td></tr>
+                    <tr><th>Beschreibung</th><td><textarea name="beschreibung" id="tt_f_beschreibung" class="regular-text" rows="3" maxlength="100" required></textarea></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Speichern</button>
             </form>
@@ -155,11 +223,11 @@ class View {
         ?>
         <div id="mh-tt-copy-modal" class="mh-tt-modal" style="display:none;"><div class="mh-tt-modal-content">
             <span class="mh-tt-close">&times;</span><h3>Zeittafel kopieren & verschieben</h3>
-            <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="mh_tt_copy_timetable"><input type="hidden" name="source_id" id="copy_source_id">
                 <?php wp_nonce_field('copy_timetable_nonce', 'copy_timetable_nonce'); ?>
                 <table class="form-table">
-                    <tr><th>Neuer Name</th><td><input type="text" name="new_name" id="copy_new_name" class="regular-text" required></td></tr>
+                    <tr><th>Neuer Name</th><td><input type="text" name="new_name" id="copy_new_name" class="regular-text" maxlength="30" required></td></tr>
                     <tr><th>Neues Enddatum</th><td><input type="date" name="new_end_date" required><p class="description">Datum, an dem der letzte Termin der Kopie enden soll.</p></td></tr>
                 </table>
                 <button type="submit" class="button button-primary">Kopie erstellen</button><button type="button" class="button mh-tt-close-btn">Abbrechen</button>
@@ -168,48 +236,127 @@ class View {
         <?php
     }
 
-    // --- Handlers ---
+    // --- Handlers: Termine ---
     public function handleSaveTermin(): void {
+        $this->requireCapability();
         check_admin_referer('termin_speichern_nonce', 'termin_speichern_nonce');
-        if (strpos((string)$_POST['id'], ',') !== false) $this->terminController->processBulkSubmission($_POST);
-        else $this->terminController->processFormSubmission($_POST);
-        wp_redirect(admin_url('admin.php?page=termine&message=success')); exit;
+
+        $isBulk = strpos((string)($_POST['id'] ?? ''), ',') !== false;
+        $errors = $isBulk
+            ? $this->terminController->processBulkSubmission(wp_unslash($_POST))
+            : $this->terminController->processFormSubmission(wp_unslash($_POST));
+
+        if (empty($errors)) {
+            $this->addNotice('success', [$isBulk ? 'Die ausgewählten Termine wurden geändert.' : 'Der Termin wurde gespeichert.']);
+        } else {
+            $intro = $isBulk ? 'Massenänderung nicht vollständig durchgeführt:' : 'Der Termin wurde nicht gespeichert:';
+            $this->addNotice('error', array_merge([$intro], self::flattenErrors($errors)));
+        }
+        $this->redirectTo('termine');
     }
 
+    public function handleDeleteTermin(): void {
+        $this->requireCapability();
+        $id = (int)($_GET['id'] ?? 0);
+        check_admin_referer('delete_termin_' . $id);
+
+        if ($this->terminController->deleteObject($id)) {
+            $this->addNotice('success', ['Der Termin wurde gelöscht.']);
+        } else {
+            $this->addNotice('error', ['Der Termin konnte nicht gelöscht werden.']);
+        }
+        $this->redirectTo('termine');
+    }
+
+    public function handleBulkCopyTermin(): void
+    {
+        $this->requireCapability();
+        check_admin_referer('bulk_copy_termin_nonce', 'bulk_copy_termin_nonce');
+
+        $ids = array_filter(array_map('intval', explode(',', (string)($_POST['selected_ids'] ?? ''))));
+        $targetId = (int)($_POST['target_timetable_id'] ?? 0);
+
+        if (!empty($ids) && $targetId > 0) {
+            $this->terminController->processBulkCopy($ids, $targetId);
+            $this->addNotice('success', [sprintf('%d Termin(e) wurden kopiert.', count($ids))]);
+        } else {
+            $this->addNotice('error', ['Keine Termine oder keine Ziel-Zeittafel ausgewählt.']);
+        }
+        $this->redirectTo('termine');
+    }
+
+    // --- Handlers: Timetables ---
     public function handleSaveTimetable(): void {
+        $this->requireCapability();
         check_admin_referer('timetable_speichern_nonce', 'timetable_speichern_nonce');
-        $this->timetableController->processFormSubmission($_POST);
-        wp_redirect(admin_url('admin.php?page=mh-timetable&message=success')); exit;
+
+        $errors = $this->timetableController->processFormSubmission(wp_unslash($_POST));
+        if (empty($errors)) {
+            $this->addNotice('success', ['Die Timetable wurde gespeichert.']);
+        } else {
+            $this->addNotice('error', array_merge(['Die Timetable wurde nicht gespeichert:'], self::flattenErrors($errors)));
+        }
+        $this->redirectTo('mh-timetable');
+    }
+
+    public function handleDeleteTimetable(): void {
+        $this->requireCapability();
+        $id = (int)($_GET['id'] ?? 0);
+        check_admin_referer('delete_timetable_' . $id);
+
+        $result = $this->timetableController->deleteObject($id);
+        $this->addNotice($result['success'] ? 'success' : 'error', [$result['message']]);
+        $this->redirectTo('mh-timetable');
     }
 
     public function handleCopyTimetable(): void {
+        $this->requireCapability();
         check_admin_referer('copy_timetable_nonce', 'copy_timetable_nonce');
-        $this->timetableController->copyTimetable($_POST);
-        wp_redirect(admin_url('admin.php?page=mh-timetable&message=copied')); exit;
+
+        if ($this->timetableController->copyTimetable(wp_unslash($_POST))) {
+            $this->addNotice('success', ['Die Timetable wurde kopiert.']);
+        } else {
+            $this->addNotice('error', ['Die Timetable konnte nicht kopiert werden. Hat die Vorlage überhaupt Termine, und ist das Enddatum gültig?']);
+        }
+        $this->redirectTo('mh-timetable');
     }
 
+    // --- iCal ---
     public function handleIcalDownload(): void {
         if (!isset($_GET['download_ical'])) return;
-        $id = (int)$_GET['timetable_id']; $bg = sanitize_text_field($_GET['bg'] ?? '');
-        $timetable = $this->timetableRepository->find($id);
+
+        $id = (int)($_GET['timetable_id'] ?? 0);
+        $bg = sanitize_text_field(wp_unslash($_GET['bg'] ?? ''));
+
+        $timetable = $id > 0 ? $this->timetableRepository->find($id) : null;
+        if (!$timetable) {
+            wp_die('Diese Zeittafel existiert nicht.', 'Nicht gefunden', ['response' => 404]);
+        }
+
         $termine = $this->termineRepository->getByTimetableId($id);
-        if (!empty($bg)) $termine = array_filter($termine, fn($t) => $t->getBildungsgang() === $bg);
-        $icalService = new \MH\Timetable\Service\IcalService();
-        $content = $icalService->generateString($termine, $timetable->getBezeichnung() . " - " . $bg);
-        header('Content-Type: text/calendar; charset=utf-8'); header('Content-Disposition: attachment; filename="timetable.ics"');
-        echo $content; exit;
+        if ($bg !== '') {
+            $termine = array_filter($termine, fn($t) => $t->getBildungsgang() === $bg);
+        }
+
+        $title = $timetable->getBezeichnung() . ($bg !== '' ? ' - ' . $bg : '');
+        $filename = sanitize_file_name($title) ?: 'timetable';
+        $content = $this->icalService->generateString($termine, $title);
+
+        nocache_headers();
+        header('Content-Type: text/calendar; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '.ics"');
+        echo $content;
+        exit;
     }
 
-    // (Andere Handlers für Ferien wie gehabt...)
-    
-
+    // --- Assets ---
     public function adminJavascript(): void {
-        wp_enqueue_script('mh_tt_javascript', MH_TT_URL . 'includes/Viewer/js/mh_tt_javascript.js', ['jquery'], '1.5', true);
+        wp_enqueue_script('mh_tt_javascript', MH_TT_URL . 'includes/Viewer/js/mh_tt_javascript.js', ['jquery'], MH_TT_VERSION, true);
         wp_localize_script('mh_tt_javascript', 'mh_tt_params', ['nonce' => wp_create_nonce('mh_tt_nonce'), 'ajaxurl' => admin_url('admin-ajax.php')]);
     }
 
-    public function customAdminStyles(): void { wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css'); }
-    public function timetableEnqueueStyles(): void 
+    public function customAdminStyles(): void { wp_enqueue_style('custom-admin-style', MH_TT_URL . 'includes/Viewer/css/timetable_admin.css', [], MH_TT_VERSION); }
+    public function timetableEnqueueStyles(): void
 	{
 		wp_enqueue_style('dashicons');
 
@@ -224,6 +371,8 @@ class View {
 			(string)$ver // Zwingt den Browser zum Neuladen bei jeder Änderung
 		);
 	}
+
+    // --- Shortcode ---
     public function setupShortcodes(): void { add_shortcode('insertTimetable', [$this, 'shortcodeInsertTimetable']); }
     public function shortcodeInsertTimetable($atts, string $content = ''): string {
         $atts = shortcode_atts(['id' => 0, 'entwurf' => 'nein'], $atts); $id = (int)$atts['id'];
@@ -234,6 +383,8 @@ class View {
         $frontendView = new \MH\Timetable\Viewer\TimetableFrontendView($timetable, (string)$atts['entwurf'], $ferienMap);
         return $frontendView->render();
     }
+
+    // --- Ferien ---
 	private function renderFerienForm(): void
     {
         ?>
@@ -242,16 +393,16 @@ class View {
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="mh_tt_save_ferien">
                 <?php wp_nonce_field('mh_tt_ferien_action', 'mh_tt_ferien_nonce'); ?>
-                
+
                 <table class="form-table">
                     <tr>
                         <th><label>Name</label></th>
-                        <td><input type="text" name="ferien_name" class="regular-text" required></td>
+                        <td><input type="text" name="name" class="regular-text" required></td>
                     </tr>
                     <tr>
                         <th><label>Zeitraum</label></th>
                         <td>
-                            Von: <input type="date" name="startdatum" required> 
+                            Von: <input type="date" name="startdatum" required>
                             Bis: <input type="date" name="enddatum" required>
                         </td>
                     </tr>
@@ -270,7 +421,7 @@ class View {
         </div>
         <?php
     }
-	
+
 	private function renderFerienImportForm(): void
     {
         $years = range((int)date('Y'), (int)date('Y') + 3);
@@ -293,10 +444,10 @@ class View {
                         <th><label>Jahr & Bundesland</label></th>
                         <td>
                             <select name="jahr">
-                                <?php foreach ($years as $year) echo "<option value='$year'>$year</option>"; ?>
+                                <?php foreach ($years as $year) printf('<option value="%d">%d</option>', $year, $year); ?>
                             </select>
                             <select name="bundesland">
-                                <?php foreach ($bundeslaender as $code => $name) echo "<option value='$code'>$name</option>"; ?>
+                                <?php foreach ($bundeslaender as $code => $name) printf('<option value="%s">%s</option>', esc_attr($code), esc_html($name)); ?>
                             </select>
                         </td>
                     </tr>
@@ -306,33 +457,52 @@ class View {
         </div>
         <?php
     }
-	
+
 	public function handleSaveFerien(): void
     {
+        $this->requireCapability();
         check_admin_referer('mh_tt_ferien_action', 'mh_tt_ferien_nonce');
-        $this->ferienController->saveFerien($_POST);
-        wp_redirect(admin_url('admin.php?page=Einstellungen&message=saved'));
-        exit;
+
+        if ($this->ferienController->saveFerien(wp_unslash($_POST))) {
+            $this->addNotice('success', ['Der Eintrag wurde gespeichert.']);
+        } else {
+            $this->addNotice('error', ['Der Eintrag wurde nicht gespeichert (ungültige Daten oder bereits vorhanden).']);
+        }
+        $this->redirectTo('Einstellungen');
     }
 
     public function handleImportFerien(): void
     {
+        $this->requireCapability();
         check_admin_referer('mh_tt_import_action', 'mh_tt_import_nonce');
-        $count = $this->ferienController->importFromApi((int)$_POST['jahr'], sanitize_text_field($_POST['bundesland']));
-        wp_redirect(admin_url('admin.php?page=Einstellungen&message=imported&count=' . $count));
-        exit;
+
+        $count = $this->ferienController->importFromApi(
+            (int)($_POST['jahr'] ?? 0),
+            sanitize_text_field(wp_unslash($_POST['bundesland'] ?? ''))
+        );
+        $this->addNotice($count > 0 ? 'success' : 'warning', [
+            $count > 0
+                ? sprintf('%d Ferien/Feiertage wurden importiert.', $count)
+                : 'Es wurden keine neuen Einträge importiert (bereits vorhanden oder API nicht erreichbar).'
+        ]);
+        $this->redirectTo('Einstellungen');
     }
 
     public function handleDeleteFerien(): void
     {
-        $id = (int)$_GET['id'];
+        $this->requireCapability();
+        $id = (int)($_GET['id'] ?? 0);
         check_admin_referer('delete_ferien_' . $id);
-        $this->ferienController->deleteFerien($id);
-        wp_redirect(admin_url('admin.php?page=Einstellungen&message=deleted'));
-        exit;
+
+        if ($this->ferienController->deleteFerien($id)) {
+            $this->addNotice('success', ['Der Eintrag wurde gelöscht.']);
+        } else {
+            $this->addNotice('error', ['Der Eintrag konnte nicht gelöscht werden.']);
+        }
+        $this->redirectTo('Einstellungen');
     }
-    
-        private function renderBulkCopyModal(): void
+
+    private function renderBulkCopyModal(): void
     {
         $timetables = $this->timetableController->getTimetablesForDropdown();
         ?>
@@ -353,7 +523,7 @@ class View {
                             <td>
                                 <select name="target_timetable_id" required>
                                     <?php foreach ($timetables as $tt): ?>
-                                        <option value="<?php echo $tt['id']; ?>"><?php echo esc_html($tt['id'] . ' | ' . $tt['bezeichnung']); ?></option>
+                                        <option value="<?php echo (int)$tt['id']; ?>"><?php echo esc_html($tt['id'] . ' | ' . $tt['bezeichnung']); ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </td>
@@ -367,19 +537,5 @@ class View {
             </div>
         </div>
         <?php
-    }
-    public function handleBulkCopyTermin(): void
-    {
-        check_admin_referer('bulk_copy_termin_nonce', 'bulk_copy_termin_nonce');
-
-        $ids = explode(',', $_POST['selected_ids'] ?? '');
-        $targetId = (int)$_POST['target_timetable_id'];
-
-        if (!empty($ids) && $targetId > 0) {
-            $this->terminController->processBulkCopy($ids, $targetId);
-        }
-
-        wp_redirect(admin_url('admin.php?page=termine&message=bulk_copy_success'));
-        exit;
     }
 }

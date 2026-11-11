@@ -66,15 +66,18 @@ class TimetablesListTable extends WP_List_Table
 
     public function column_actions($item): string
     {
-        $deleteNonce = wp_create_nonce('delete_timetable_' . $item->getId());
-        $deleteUrl = admin_url(sprintf('admin.php?page=mh-timetable&action=delete&id=%d&_wpnonce=%s', $item->getId(), $deleteNonce));
+        $deleteUrl = wp_nonce_url(
+            admin_url(sprintf('admin-post.php?action=mh_tt_delete_timetable&id=%d', $item->getId())),
+            'delete_timetable_' . $item->getId()
+        );
 
         return sprintf(
-            '<a href="#" class="button mh-tt-timetable-edit-btn" data-id="%d">Bearbeiten</a> ' .
-            '<a href="%s" class="button" onclick="return confirm(\'Zeittafel wirklich löschen?\')">Löschen</a> ' . 
-			'<a href="#" class="button mh-tt-copy-btn" data-id="'.$item->getId().'" data-name="'.$item->getBezeichnung().'">Kopieren</a>',
+            '<a href="#" class="button mh-tt-timetable-edit-btn" data-id="%1$d">Bearbeiten</a> ' .
+            '<a href="%2$s" class="button" onclick="return confirm(\'Zeittafel wirklich löschen?\')">Löschen</a> ' .
+            '<a href="#" class="button mh-tt-copy-btn" data-id="%1$d" data-name="%3$s">Kopieren</a>',
             $item->getId(),
-            esc_url($deleteUrl)
+            esc_url($deleteUrl),
+            esc_attr($item->getBezeichnung())
         );
     }
 }

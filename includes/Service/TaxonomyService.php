@@ -8,6 +8,8 @@ namespace MH\Timetable\Service;
  */
 class TaxonomyService
 {
+    private const OPTION_DEFAULTS_ADDED = 'mh_tt_default_terms_added';
+
     public function registerTaxonomies(): void
     {
         // 1. Bildungsgänge
@@ -43,9 +45,12 @@ class TaxonomyService
             'show_ui'           => true,
             'show_in_rest'      => true,
         ]);
-		 // Nach der Registrierung die Defaults prüfen
-		$this->addDefaultTerms();
-		$this->initTaxonomyHooks();
+        // Standard-Ereignistypen nur ein einziges Mal anlegen. Sonst würden
+        // vom Admin gelöschte Typen bei jedem Seitenaufruf wieder auftauchen.
+        if (!get_option(self::OPTION_DEFAULTS_ADDED)) {
+            $this->addDefaultTerms();
+            update_option(self::OPTION_DEFAULTS_ADDED, 1);
+        }
         $this->initTaxonomyHooks();
     }
 
@@ -90,7 +95,7 @@ class TaxonomyService
 
     public function saveColorField($term_id): void
     {
-        if (isset($_POST['ereignisfarbe'])) {
+        if (isset($_POST['ereignisfarbe']) && current_user_can('manage_categories')) {
             update_term_meta($term_id, 'ereignisfarbe', sanitize_hex_color($_POST['ereignisfarbe']));
         }
     }
