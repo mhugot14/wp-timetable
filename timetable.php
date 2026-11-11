@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Timetable Schulverwaltung
- * Version: 0.8.0
+ * Version: 0.8.1
  * Author: Michael Hugot
  * Requires PHP: 7.4
  */
@@ -24,7 +24,7 @@ if (file_exists(__DIR__ . '/vendor/autoload.php')) {
     });
 }
 
-define('MH_TT_VERSION', '0.8.0');
+define('MH_TT_VERSION', '0.8.1');
 define('MH_TT_PATH', plugin_dir_path(__FILE__));
 define('MH_TT_URL', plugin_dir_url(__FILE__));
 

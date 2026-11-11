@@ -109,14 +109,22 @@ class WpdbTermineRepository implements TermineRepositoryInterface
         $sql = $this->baseSelect() . " WHERE 1=1";
         $params = [];
 
-        if ($bildungsgang !== '') {
-            $sql .= " AND COALESCE(bg.name, t.bildungsgang) = %s";
-            $params[] = $bildungsgang;
-        }
-
-        if ($ereignistyp !== '') {
-            $sql .= " AND COALESCE(et.name, t.ereignistyp) = %s";
-            $params[] = $ereignistyp;
+        // Wichtig: Nicht über COALESCE(Term-Name, Spalte) vergleichen. Haben die
+        // Plugin-Tabellen eine andere Kollation als wp_terms (häufig auf älteren
+        // Servern), bricht MySQL mit "Illegal mix of collations" ab und der Filter
+        // liefert still 0 Treffer. Daher Name → Term-ID auflösen und nur Spalten
+        // der Termin-Tabelle vergleichen.
+        foreach (['bildungsgang' => $bildungsgang, 'ereignistyp' => $ereignistyp] as $taxonomy => $name) {
+            if ($name === '') continue;
+            $termId = $this->resolveTermId($name, $taxonomy);
+            if ($termId) {
+                $sql .= " AND (t.{$taxonomy}_id = %d OR (t.{$taxonomy}_id IS NULL AND t.{$taxonomy} = %s))";
+                $params[] = $termId;
+                $params[] = $name;
+            } else {
+                $sql .= " AND t.{$taxonomy}_id IS NULL AND t.{$taxonomy} = %s";
+                $params[] = $name;
+            }
         }
 
         if ($timetableId > 0) {
