@@ -11,6 +11,8 @@ use MH\Timetable\Service\TaxonomyService;
 use MH\Timetable\Service\IcalService;
 use MH\Timetable\Service\TimetableCopyService;
 use MH\Timetable\Service\SchulkalenderService;
+use MH\Timetable\Service\FristenService;
+use MH\Timetable\Service\KonfliktService;
 use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
 use MH\Timetable\Controller\FerienController;
@@ -35,9 +37,11 @@ class Kernel
         // Jetzt sind $timetableRepo und $termineRepo bekannt:
         $schulkalender   = new SchulkalenderService($ferienRepo);
         $copyService     = new TimetableCopyService($timetableRepo, $termineRepo, $schulkalender);
+        $fristenService  = new FristenService($schulkalender, $termineRepo);
+        $konfliktService = new KonfliktService($schulkalender, $fristenService, $termineRepo);
 
         // --- 3. CONTROLLER (Injizieren der Repos und Services) ---
-        $terminController    = new TerminController($termineRepo);
+        $terminController    = new TerminController($termineRepo, $fristenService, $konfliktService);
         $timetableController = new TimetableController($timetableRepo, $termineRepo, $copyService);
         $ferienController    = new FerienController($ferienRepo, $holidayApi);
 
@@ -50,7 +54,9 @@ class Kernel
             $timetableRepo,
             $ferienRepo,
             $taxonomyService,
-            $icalService
+            $icalService,
+            $fristenService,
+            $konfliktService
         );
 
         // --- 5. HOOKS & AJAX ---

@@ -11,6 +11,8 @@ use MH\Timetable\Model\Repository\TimetableRepositoryInterface;
 use MH\Timetable\Model\Repository\FerienRepositoryInterface;
 use MH\Timetable\Service\TaxonomyService;
 use MH\Timetable\Service\IcalService;
+use MH\Timetable\Service\FristenService;
+use MH\Timetable\Service\KonfliktService;
 use MH\Timetable\Install\Schema;
 use MH\Timetable\Model\Entity\Timetable;
 
@@ -29,6 +31,8 @@ class View {
     private FerienRepositoryInterface $ferienRepository;
     private TaxonomyService $taxonomyService;
     private IcalService $icalService;
+    private FristenService $fristenService;
+    private KonfliktService $konfliktService;
 
     public function __construct(
         TerminController $terminController,
@@ -38,8 +42,12 @@ class View {
         TimetableRepositoryInterface $timetableRepository,
         FerienRepositoryInterface $ferienRepository,
         TaxonomyService $taxonomyService,
-        IcalService $icalService
+        IcalService $icalService,
+        FristenService $fristenService,
+        KonfliktService $konfliktService
     ) {
+        $this->fristenService = $fristenService;
+        $this->konfliktService = $konfliktService;
         $this->terminController = $terminController;
         $this->timetableController = $timetableController;
         $this->ferienController = $ferienController;
@@ -69,6 +77,8 @@ class View {
         add_action('admin_post_mh_tt_copy_timetable', [$this, 'handleCopyTimetable']);
         add_action('admin_post_mh_tt_save_ferien', [$this, 'handleSaveFerien']);
         add_action('admin_post_mh_tt_import_ferien', [$this, 'handleImportFerien']);
+        add_action('admin_post_mh_tt_save_frist', [$this, 'handleSaveFrist']);
+        add_action('admin_post_mh_tt_delete_frist', [$this, 'handleDeleteFrist']);
 
         if (isset($_GET['action']) && $_GET['action'] === 'delete_ferien') {
             add_action('admin_init', [$this, 'handleDeleteFerien']);
@@ -95,7 +105,7 @@ class View {
     public function renderTerminePage(): void {
         echo '<div class="wrap"><h1 class="wp-heading-inline">Terminübersicht</h1>';
         echo '<button class="page-title-action mh-tt-add-btn">+ Neuen Termin anlegen</button><hr class="wp-header-end">';
-        $table = new \MH\Timetable\Viewer\ListTable\TermineListTable($this->terminController, $this->timetableController, $this->taxonomyService);
+        $table = new \MH\Timetable\Viewer\ListTable\TermineListTable($this->terminController, $this->timetableController, $this->taxonomyService, $this->konfliktService);
         echo '<form method="get"><input type="hidden" name="page" value="termine">';
         $table->prepare_items();
         $table->display();
@@ -114,7 +124,93 @@ class View {
         $ferienTable->prepare_items();
         echo '<form method="post">'; $ferienTable->display(); echo '</form>';
         $this->renderFerienImportForm();
+        $this->renderFristen();
         echo '</div>';
+    }
+
+    // --- Abhängige Fristen ---
+    private function renderFristen(): void
+    {
+        $regeln = $this->fristenService->getRegeln();
+        $typen = $this->taxonomyService->getEreignistypen();
+        $postUrl = esc_url(admin_url('admin-post.php'));
+        ?>
+        <h2 id="fristen">Abhängige Fristen</h2>
+        <p>Regeln zwischen Ereignistypen, jeweils innerhalb derselben Timetable und desselben Bildungsgangs.
+           Wird der Bezugstermin verschoben, wandern die abhängigen Termine mit (Abstand in Schultagen bleibt,
+           unterschreitet aber nie den Mindestabstand). Verstöße erscheinen als Hinweis in der Terminliste.</p>
+        <table class="widefat striped" style="max-width:900px;">
+            <thead><tr><th>Regel</th><th style="width:120px;">Aktion</th></tr></thead>
+            <tbody>
+            <?php if (empty($regeln)): ?>
+                <tr><td colspan="2"><em>Noch keine Regeln angelegt.</em></td></tr>
+            <?php endif; ?>
+            <?php foreach ($regeln as $regel):
+                $deleteUrl = wp_nonce_url(admin_url('admin-post.php?action=mh_tt_delete_frist&id=' . rawurlencode($regel['id'])), 'delete_frist_' . $regel['id']);
+                ?>
+                <tr>
+                    <td><?php echo esc_html($this->fristenService->beschreibe($regel)); ?></td>
+                    <td><a href="<?php echo esc_url($deleteUrl); ?>" class="button" onclick="return confirm('Regel wirklich löschen?')">Löschen</a></td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <div class="postbox" style="padding: 20px; margin-top: 20px; max-width:900px;">
+            <h3>Neue Regel</h3>
+            <form method="post" action="<?php echo $postUrl; ?>">
+                <input type="hidden" name="action" value="mh_tt_save_frist">
+                <?php wp_nonce_field('mh_tt_frist_action', 'mh_tt_frist_nonce'); ?>
+                <p>
+                    <select name="abhaengig_id" required>
+                        <option value="">– Ereignistyp –</option>
+                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->term_id, esc_html($t->name)); ?>
+                    </select>
+                    <select name="richtung">
+                        <option value="vor">endet spätestens</option>
+                        <option value="nach">beginnt frühestens</option>
+                    </select>
+                    <input type="number" name="abstand" value="1" min="0" max="60" style="width:70px;" required> Schultag(e)
+                    <span class="mh-tt-richtung-text">vor Beginn / nach Ende von</span>
+                    <select name="bezug_id" required>
+                        <option value="">– Ereignistyp –</option>
+                        <?php foreach ($typen as $t) printf('<option value="%d">%s</option>', $t->term_id, esc_html($t->name)); ?>
+                    </select>
+                </p>
+                <p class="description">Beispiele: „NE endet spätestens 3 Schultage vor Beginn von ZK“ · „ZA beginnt frühestens 1 Schultag nach Ende von ZK“.
+                    Abstand 0 = am selben Tag.</p>
+                <p><button type="submit" class="button button-primary">Regel anlegen</button></p>
+            </form>
+        </div>
+        <?php
+    }
+
+    public function handleSaveFrist(): void
+    {
+        $this->requireCapability();
+        check_admin_referer('mh_tt_frist_action', 'mh_tt_frist_nonce');
+
+        $fehler = $this->fristenService->addRegel(
+            (int)($_POST['abhaengig_id'] ?? 0),
+            (int)($_POST['bezug_id'] ?? 0),
+            sanitize_key($_POST['richtung'] ?? ''),
+            (int)($_POST['abstand'] ?? -1)
+        );
+        $this->addNotice($fehler === null ? 'success' : 'error', [$fehler ?? 'Die Regel wurde angelegt.']);
+        wp_safe_redirect(admin_url('admin.php?page=Einstellungen#fristen'));
+        exit;
+    }
+
+    public function handleDeleteFrist(): void
+    {
+        $this->requireCapability();
+        $id = sanitize_text_field(wp_unslash($_GET['id'] ?? ''));
+        check_admin_referer('delete_frist_' . $id);
+
+        $ok = $this->fristenService->deleteRegel($id);
+        $this->addNotice($ok ? 'success' : 'error', [$ok ? 'Die Regel wurde gelöscht.' : 'Die Regel wurde nicht gefunden.']);
+        wp_safe_redirect(admin_url('admin.php?page=Einstellungen#fristen'));
+        exit;
     }
 
     // --- Admin-Meldungen ---
@@ -267,6 +363,14 @@ class View {
         } else {
             $intro = $isBulk ? 'Massenänderung nicht vollständig durchgeführt:' : 'Der Termin wurde nicht gespeichert:';
             $this->addNotice('error', array_merge([$intro], self::flattenErrors($errors)));
+        }
+
+        $hinweise = $this->terminController->getHinweise();
+        if (!empty($hinweise['info'])) {
+            $this->addNotice('info', array_merge(['Abhängige Termine wurden mitverschoben:'], $hinweise['info']));
+        }
+        if (!empty($hinweise['warning'])) {
+            $this->addNotice('warning', array_merge(['Bitte prüfen (gespeichert wurde trotzdem):'], array_values(array_unique($hinweise['warning']))));
         }
         $this->redirectTo('termine');
     }

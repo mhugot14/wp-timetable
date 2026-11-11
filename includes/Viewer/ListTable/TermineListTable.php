@@ -6,6 +6,7 @@ namespace MH\Timetable\Viewer\ListTable;
 use MH\Timetable\Controller\TerminController;
 use MH\Timetable\Controller\TimetableController;
 use MH\Timetable\Service\TaxonomyService;
+use MH\Timetable\Service\KonfliktService;
 use MH\Timetable\Model\Entity\Termin;
 use WP_List_Table;
 
@@ -20,12 +21,17 @@ class TermineListTable extends WP_List_Table
     private TimetableController $timetableController;
     private TaxonomyService $taxonomyService;
 	private array $timetableNames = [];
+    private ?KonfliktService $konfliktService;
+    /** @var array<int, string[]> Termin-ID → Hinweise */
+    private array $hinweise = [];
 
     public function __construct(
         TerminController $terminController,
         TimetableController $timetableController,
-        TaxonomyService $taxonomyService
+        TaxonomyService $taxonomyService,
+        ?KonfliktService $konfliktService = null
     ) {
+        $this->konfliktService = $konfliktService;
         parent::__construct([
             'singular' => 'termin',
             'plural'   => 'termine',
@@ -52,6 +58,7 @@ class TermineListTable extends WP_List_Table
             'ende'           => 'Ende',
             'verantwortlich' => 'Verantwortlich',
             'timetable_ID'   => 'Timetable',
+            'hinweise'       => '<span class="dashicons dashicons-warning" title="Hinweise"></span>',
             'actions'        => 'Aktionen'
         ];
     }
@@ -84,6 +91,14 @@ class TermineListTable extends WP_List_Table
             $filters['bildungsgang'],
             $filters['ereignistyp']
         );
+
+        // Hinweise (Konflikte, Fristen) für alle gefilterten Termine
+        if ($this->konfliktService) {
+            $this->hinweise = $this->konfliktService->pruefeListe($this->items);
+            if ($filters['nur_hinweise'] === '1') {
+                $this->items = array_values(array_filter($this->items, fn(Termin $t) => isset($this->hinweise[(int)$t->getId()])));
+            }
+        }
 
         // 4. Sortierung
         usort($this->items, [$this, 'sortData']);
@@ -142,6 +157,17 @@ class TermineListTable extends WP_List_Table
         }
     }
 
+    public function column_hinweise($item): string
+    {
+        $liste = $this->hinweise[(int)$item->getId()] ?? [];
+        if (!$liste) return '';
+        return sprintf(
+            '<span class="dashicons dashicons-warning" style="color:#dba617; cursor:help;" title="%s"></span><span class="screen-reader-text">%s</span>',
+            esc_attr(implode("\n", $liste)),
+            esc_html(implode(' ', $liste))
+        );
+    }
+
     public function column_cb($item): string
     {
         return sprintf('<input type="checkbox" name="bulk-delete[]" value="%d" />', $item->getId());
@@ -190,6 +216,13 @@ class TermineListTable extends WP_List_Table
             printf('<option value="%s" %s>%s</option>', esc_attr($et->name), selected($filters['ereignistyp'], $et->name, false), esc_html($et->name));
         }
         echo '</select>';
+
+        if ($this->konfliktService) {
+            printf(
+                '<label style="margin:0 8px; line-height:30px;"><input type="checkbox" name="filter_nur_hinweise" value="1" %s> nur mit Hinweisen</label>',
+                checked($filters['nur_hinweise'], '1', false)
+            );
+        }
 
         submit_button('Filtern', 'button', 'filter_action', false);
         submit_button('Reset', 'button', 'reset_filter', false);
@@ -247,12 +280,14 @@ class TermineListTable extends WP_List_Table
         update_user_meta($userId, 'filter_timetable', sanitize_text_field($data['filter_timetable'] ?? ''));
         update_user_meta($userId, 'filter_bildungsgang', sanitize_text_field($data['filter_bildungsgang'] ?? ''));
         update_user_meta($userId, 'filter_ereignistyp', sanitize_text_field($data['filter_ereignistyp'] ?? ''));
+        update_user_meta($userId, 'filter_nur_hinweise', empty($data['filter_nur_hinweise']) ? '' : '1');
     }
 
     private function clearFilters(int $userId): void {
         delete_user_meta($userId, 'filter_timetable');
         delete_user_meta($userId, 'filter_bildungsgang');
         delete_user_meta($userId, 'filter_ereignistyp');
+        delete_user_meta($userId, 'filter_nur_hinweise');
     }
 
     private function getFilters(int $userId): array {
@@ -260,6 +295,7 @@ class TermineListTable extends WP_List_Table
             'timetable' => get_user_meta($userId, 'filter_timetable', true) ?: '',
             'bildungsgang' => get_user_meta($userId, 'filter_bildungsgang', true) ?: '',
             'ereignistyp' => get_user_meta($userId, 'filter_ereignistyp', true) ?: '',
+            'nur_hinweise' => get_user_meta($userId, 'filter_nur_hinweise', true) ?: '',
         ];
     }
 }

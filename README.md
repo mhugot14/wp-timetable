@@ -78,6 +78,32 @@ so, dass der letzte Termin am gewählten Enddatum liegt.
   Dafür müssen die Ferien des Zielzeitraums unter *Einstellungen* hinterlegt sein,
   sonst erscheint eine Warnung.
 
+## Hinweise zu Terminen (Konfliktwarnungen)
+
+Nach dem Speichern und in der Spalte ⚠ der Terminliste (Tooltip; Filter
+„nur mit Hinweisen“) erscheinen Hinweise. Sie blockieren das Speichern nicht:
+
+- Beginn oder Ende an einem Wochenende, in den Ferien oder an einem Feiertag
+- Überschneidung mit einem Termin **anderen** Typs im selben Bildungsgang
+  (mehrere Termine gleichen Typs am selben Tag, z. B. Konferenzen je Klasse, sind normal)
+- mögliche Dublette: gleicher Typ, gleiche Bezeichnung, gleiche Daten
+- Verstoß gegen eine abhängige Frist
+
+## Abhängige Fristen
+
+*Einstellungen → Abhängige Fristen* definiert Regeln zwischen Ereignistypen, z. B.
+
+- „NE endet spätestens 3 Schultage vor Beginn von ZK“
+- „ZA beginnt frühestens 1 Schultag nach Ende von ZK“
+
+Regeln gelten je Timetable und Bildungsgang. Maßgeblich ist bei „vor“ der
+**früheste**, bei „nach“ der **späteste** Bezugstermin, also die erste bzw. letzte
+Konferenz des Durchgangs. Verschiebt sich dieser Termin (einzeln oder per
+Mehrfachänderung), wandern die abhängigen Termine mit. Ihr bisheriger Abstand in
+Schultagen bleibt erhalten, unterschreitet aber nie den Mindestabstand. Ketten
+(z. B. ZK → ZA → APA) werden bis zu 5 Stufen weit nachgezogen. Jede
+Mitverschiebung wird nach dem Speichern aufgelistet.
+
 ## Datenmodell
 
 | Tabelle | Inhalt |

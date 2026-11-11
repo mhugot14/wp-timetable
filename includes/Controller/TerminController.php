@@ -6,6 +6,8 @@ namespace MH\Timetable\Controller;
 use MH\Timetable\Model\Entity\Termin;
 use MH\Timetable\Model\Repository\TermineRepositoryInterface;
 use MH\Timetable\Install\Schema;
+use MH\Timetable\Service\FristenService;
+use MH\Timetable\Service\KonfliktService;
 use DateTime;
 
 /**
@@ -15,10 +17,49 @@ use DateTime;
 class TerminController
 {
     private TermineRepositoryInterface $repository;
+    private ?FristenService $fristen;
+    private ?KonfliktService $konflikte;
 
-    public function __construct(TermineRepositoryInterface $repository)
-    {
+    /** @var array{info: string[], warning: string[]} Hinweise des letzten Speichervorgangs */
+    private array $hinweise = ['info' => [], 'warning' => []];
+
+    public function __construct(
+        TermineRepositoryInterface $repository,
+        ?FristenService $fristen = null,
+        ?KonfliktService $konflikte = null
+    ) {
         $this->repository = $repository;
+        $this->fristen = $fristen;
+        $this->konflikte = $konflikte;
+    }
+
+    /**
+     * Hinweise des letzten Speicherns: mitverschobene Termine (info) und
+     * Konflikte (warning). Blockieren das Speichern nicht.
+     * @return array{info: string[], warning: string[]}
+     */
+    public function getHinweise(): array
+    {
+        return $this->hinweise;
+    }
+
+    /**
+     * Nach dem Speichern: abhängige Fristen mitziehen und Konflikte sammeln.
+     * @param Termin|null $alt Zustand vor der Änderung (null bei neuem Termin)
+     */
+    private function nachSpeichern(int $id, ?Termin $alt): void
+    {
+        $neu = $this->repository->find($id);
+        if (!$neu) return;
+
+        if ($alt && $this->fristen) {
+            $this->hinweise['info'] = array_merge($this->hinweise['info'], $this->fristen->anwenden($neu, $alt));
+        }
+        if ($this->konflikte) {
+            foreach ($this->konflikte->pruefe($neu) as $hinweis) {
+                $this->hinweise['warning'][] = sprintf('%s %s „%s“: %s', $neu->getBildungsgang(), $neu->getEreignistyp(), $neu->getBezeichnung(), $hinweis);
+            }
+        }
     }
 
     /**
@@ -35,10 +76,19 @@ class TerminController
         $errors = $this->checkFormData($sanitizedData);
 
         if (empty($errors)) {
-            $ok = empty($formData['id'])
-                ? $this->addObject($sanitizedData)
-                : $this->editObject((int)$formData['id'], $sanitizedData);
-            if (!$ok) {
+            $id = (int)($formData['id'] ?? 0);
+            $alt = $id > 0 ? $this->repository->find($id) : null;
+
+            if ($id > 0) {
+                $ok = $this->editObject($id, $sanitizedData);
+            } else {
+                $id = $this->addObject($sanitizedData);
+                $ok = $id > 0;
+            }
+
+            if ($ok) {
+                $this->nachSpeichern($id, $alt);
+            } else {
                 $errors['datenbank'][] = 'Der Termin konnte nicht gespeichert werden (Datenbankfehler).';
             }
         }
@@ -62,7 +112,8 @@ class TerminController
         ];
     }
 
-    public function addObject(array $data): bool
+    /** @return int ID des neuen Termins, 0 bei Fehler */
+    public function addObject(array $data): int
     {
         $termin = new Termin(
             new DateTime($data['beginn']),
@@ -74,7 +125,7 @@ class TerminController
             $data['timetableId']
         );
 
-        return $this->repository->create($termin);
+        return $this->repository->create($termin) ? (int)$termin->getId() : 0;
     }
 
     public function editObject(int $id, array $data): bool
@@ -262,7 +313,10 @@ class TerminController
 				continue;
 			}
 
-			$this->repository->update((int)$id, $termin);
+			$alt = $this->repository->find((int)$id); // unveränderter Stand für die Fristen
+			if ($this->repository->update((int)$id, $termin)) {
+				$this->nachSpeichern((int)$id, $alt);
+			}
 		}
 
 		return $errors;

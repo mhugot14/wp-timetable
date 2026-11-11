@@ -74,6 +74,44 @@ class SchulkalenderService
         return $kandidat;
     }
 
+    /**
+     * Geht $anzahl Schultage vor (positiv) oder zurück (negativ).
+     * Bei 0 wird der Tag selbst geliefert.
+     */
+    public function verschiebeUmSchultage(DateTime $tag, int $anzahl): DateTime
+    {
+        $ergebnis = clone $tag;
+        $schritt = $anzahl >= 0 ? '+1 day' : '-1 day';
+        $rest = abs($anzahl);
+        for ($i = 0; $rest > 0 && $i < 400; $i++) {
+            $ergebnis->modify($schritt);
+            if ($this->isSchultag($ergebnis)) {
+                $rest--;
+            }
+        }
+        return $ergebnis;
+    }
+
+    /**
+     * Anzahl Schultage im Intervall (von, bis] – also wie viele Schultage man von
+     * $von aus vorgehen muss, um $bis zu erreichen. Negativ, wenn $bis vor $von liegt.
+     */
+    public function schultageZwischen(DateTime $von, DateTime $bis): int
+    {
+        if ($bis < $von) {
+            return -$this->schultageZwischen($bis, $von);
+        }
+        $anzahl = 0;
+        $tag = clone $von;
+        for ($i = 0; $tag < $bis && $i < 1000; $i++) {
+            $tag->modify('+1 day');
+            if ($this->isSchultag($tag)) {
+                $anzahl++;
+            }
+        }
+        return $anzahl;
+    }
+
     /** Gibt es im Zeitraum überhaupt hinterlegte Ferien/Feiertage? */
     public function hatFerienDaten(DateTime $von, DateTime $bis): bool
     {
